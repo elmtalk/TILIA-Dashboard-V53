@@ -1,0 +1,2407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TILIA Dashboard v53 – Clean Report Figure Export</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<style>
+:root{
+  --bg:#eef3f6;
+  --card:#ffffff;
+  --line:#cfd8e3;
+  --ink:#16304b;
+  --muted:#5f7187;
+  --green:#0f7a45;
+  --green-soft:#e8f5ec;
+  --blue:#0d4d95;
+  --blue-soft:#eaf2fb;
+  --red:#c1121f;
+  --amber:#9a6700;
+  --amber-soft:#fff6e8;
+  --shadow:0 8px 24px rgba(17,24,39,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#f6f9fb 0%, var(--bg) 100%);color:var(--ink)}
+.app{max-width:1720px;margin:0 auto;padding:18px}
+h1{margin:0 0 6px 0;font-size:42px;line-height:1.02;font-weight:800;letter-spacing:-0.03em;color:var(--blue)}
+h3{margin:0 0 12px 0;font-size:18px;line-height:1.2;color:var(--ink)}
+.sub,.micro{font-size:12px;color:var(--muted);line-height:1.5}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;padding:8px 4px 14px 4px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn,label.filebtn{
+  border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:14px;padding:11px 14px;font-size:14px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;box-shadow:0 1px 2px rgba(0,0,0,.03);font-weight:600
+}
+.btn:hover,label.filebtn:hover{transform:translateY(-1px);transition:.15s ease}
+.btn.primary,label.filebtn.primary,.btn.secondary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.warn{background:#fff;border-color:#d2dbea;color:var(--blue)}
+input[type=file]{display:none}
+.tabs-wrap{position:sticky;top:0;z-index:1000;background:rgba(238,243,246,.95);backdrop-filter:blur(6px);padding-top:8px}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;padding:12px 0 14px 0;border-bottom:1px solid var(--line)}
+.tabbtn{border:1px solid var(--line);background:#fff;border-radius:16px;padding:12px 16px;cursor:pointer;font-weight:700;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.tabbtn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.banner{margin:16px 0;padding:13px 15px;border-radius:16px;border:1px solid #efd5a2;background:var(--amber-soft);color:var(--amber);box-shadow:var(--shadow);font-weight:600}
+.tab{display:none}.tab.active{display:block}
+.layout{display:grid;grid-template-columns:360px 1fr;gap:16px}
+.stack{display:grid;gap:16px}
+.shell{display:grid;grid-template-columns:1fr 340px;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow)}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}
+.stat{background:linear-gradient(180deg,#ffffff 0%, #f8fbff 100%)}
+.stat .label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.stat .value{font-size:28px;font-weight:800;margin-top:8px;color:var(--ink)}
+.field{margin-bottom:12px}.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;letter-spacing:.01em}
+input[type=text],input[type=number],select,textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;font-size:14px;color:var(--ink)}
+textarea{min-height:90px;resize:vertical}
+.readonly{background:#f7f9fb}
+.table-wrap{max-height:72vh;overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff}
+table{width:100%;min-width:1850px;border-collapse:collapse;font-size:13px;background:#fff;table-layout:fixed}
+th,td{border-bottom:1px solid #e7edf3;padding:7px;text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:#f7fbff;color:var(--muted);font-size:12px;z-index:2;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+tbody tr:hover{background:#f8fbff}
+td input, td select, td textarea{min-width:110px;font-size:12px;padding:7px 8px}
+td textarea{min-height:42px}
+.changed-row{outline:2px solid #8fc1ff; outline-offset:-2px;background:#f4f9ff}
+.unsaved-badge{display:inline-block;padding:3px 9px;border:1px solid #b2ddff;border-radius:999px;background:#eff8ff;color:#175cd3;font-size:12px}
+.flag-list{display:grid;gap:10px}
+.flag{border:1px solid var(--line);border-radius:14px;padding:11px;background:#fff}
+.flag.review{border-color:#efd5a2;background:#fffaf0}
+.flag.error{border-color:#fecaca;background:#fff1f2}
+.flag.info{border-color:#b2ddff;background:#eff8ff}
+.chart-box{height:210px;display:flex;align-items:flex-end;gap:12px;padding:12px 6px 0 6px}
+.bar{flex:1;min-height:18px;border-radius:10px 10px 0 0;background:linear-gradient(180deg,var(--blue),#7aa8d1);position:relative}
+.bar.green{background:linear-gradient(180deg,var(--green),#74c69d)}
+.bar.red{background:linear-gradient(180deg,var(--red),#f97066)}
+.bar.grey{background:linear-gradient(180deg,#98a2b3,#d0d5dd)}
+.bar-label{position:absolute;bottom:-34px;width:100%;text-align:center;font-size:11px;color:var(--muted);font-weight:700}
+.result-box{margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#f8fbff}
+.result-box .big{font-size:24px;font-weight:800}
+#map{width:100%;height:690px;border:1px solid var(--line);border-radius:18px}
+.smallgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.section-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:var(--green-soft);color:var(--green);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.module-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.module-tag{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;border-radius:999px;background:var(--blue);color:#fff;font-weight:800}
+@media (max-width:1200px){.layout,.shell{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:700px){.stats{grid-template-columns:repeat(2,1fr)} .smallgrid{grid-template-columns:1fr}}
+
+.csv-modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;z-index:5000;padding:24px}
+.csv-modal.active{display:flex}
+.csv-dialog{width:min(1160px,96vw);max-height:92vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px}
+.csv-grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
+.csv-preview-table{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:14px}
+.csv-preview-table table{min-width:100%;font-size:12px}
+.csv-preview-table th,.csv-preview-table td{padding:6px 8px;white-space:nowrap}
+.csv-map-help{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#f8fbff;font-size:12px;color:var(--muted)}
+
+.hidden-setup{display:none !important}
+</style>
+
+<style id="tilia-brand-logo-style">
+.tilia-brand-bar {
+  display:flex; align-items:center; gap:12px; margin:10px 0 14px 0;
+  padding:12px 14px; border-radius:18px;
+  background:linear-gradient(135deg,#073717,#0d4f24);
+  color:#fff; box-shadow:0 8px 24px rgba(7,55,23,.18);
+}
+.tilia-brand-logo {
+  width:54px; height:54px; flex:0 0 54px; border-radius:999px;
+  background:#fff; object-fit:contain;
+}
+.tilia-brand-title {font-weight:800; letter-spacing:.08em; font-size:24px; line-height:1;}
+.tilia-brand-sub {font-size:11px; opacity:.9; margin-top:4px; letter-spacing:.12em; text-transform:uppercase;}
+@media(max-width:700px){
+  .tilia-brand-bar {margin:8px 0 12px 0; padding:10px 12px;}
+  .tilia-brand-logo {width:44px;height:44px;flex-basis:44px;}
+  .tilia-brand-title {font-size:20px;}
+}
+</style>
+
+<style id="tilia-dashboard-v53-style">
+:root{--tilia:#0d4f24;--tilia-deep:#073717}.btn.primary,label.filebtn.primary,.btn.secondary{background:var(--tilia);border-color:var(--tilia);color:#fff}h1{color:var(--tilia-deep)}.tabbtn.active{background:var(--tilia);border-color:var(--tilia)}
+.v53-panel{margin-top:12px;border:1px solid var(--line);border-radius:20px;background:#fff;padding:16px;box-shadow:var(--shadow)}
+.v53-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}.v53-grid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;margin:12px 0}.v53-grid label{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+.v53-layer-list{display:grid;gap:8px;margin-top:10px}.v53-layer-row{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:8px;align-items:center;border:1px solid #e5e7eb;border-radius:14px;padding:9px;background:#f8fbf8}.v53-layer-row input[type=text]{font-weight:700;font-size:13px;padding:7px 9px}.v53-small{font-size:12px;color:var(--muted);line-height:1.45}.v53-note{font-size:12px;border:1px solid #d9eadc;background:#f5fbf6;border-radius:12px;padding:10px;margin-top:10px;color:#31543b}
+.v53-measure-label{background:#fff;border:2px solid #111827;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+#v53FigureFrame{background:#fff;width:1772px;padding:36px;font-family:Arial,Helvetica,sans-serif;color:#111827}#v53FigureTitle{font-size:34px;font-weight:800;margin-bottom:18px}#v53FigureMap{width:1700px;height:1120px;border:3px solid #111827;position:relative;overflow:hidden;background:#eef3f6}
+.v53-north{position:absolute;right:20px;top:20px;background:rgba(255,255,255,.94);border:2px solid #111827;border-radius:12px;padding:8px 12px;z-index:9999;text-align:center;font-weight:900;font-size:24px;line-height:1.05}.v53-scale{position:absolute;left:22px;bottom:24px;background:rgba(255,255,255,.94);border:2px solid #111827;border-radius:10px;padding:10px 12px;z-index:9999}.v53-scale-line{height:8px;border-left:3px solid #111827;border-right:3px solid #111827;border-bottom:3px solid #111827;margin-top:4px}.v53-scale-label{font-weight:800;font-size:18px;line-height:1}
+@media(max-width:1100px){.v53-grid{grid-template-columns:1fr 1fr}.v53-layer-row{grid-template-columns:auto 1fr}}@media(max-width:700px){.v53-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div>
+      <h1>TILIA Dashboard v53</h1>
+      <div class="sub">Integrated arboricultural survey, desk study and reporting workspace. Styled for laptop and large-tablet use.</div>
+    </div>
+    <div class="actions">
+<input type="file" id="importProjectInput" accept=".json,.geojson" style="display:none">
+<button class="btn primary" onclick="document.getElementById('importProjectInput').click()">Import Project Package</button>
+<script>
+document.getElementById('importProjectInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const data = JSON.parse(evt.target.result);
+      if(data.survey_geojson && data.survey_geojson.features){
+        state.rows = data.survey_geojson.features.map(f => f.properties || {});
+        renderSchedule();
+        renderSummary();
+        alert('Project package imported');
+      } else {
+        alert('Invalid project package');
+      }
+    }catch(err){
+      alert('Import failed');
+    }
+  };
+  reader.readAsText(file);
+});
+</script>
+
+      <label class="filebtn primary">Import Schedule CSV<input id="csvFile" type="file" accept=".csv" /></label>
+      <label class="filebtn">Add CSV file(s)<input id="csvFilesMulti" type="file" accept=".csv" multiple /></label>
+      <button class="btn" id="deleteScheduleBtn">Delete schedule</button>
+      <button class="btn" id="exportScheduleBtn">Export Schedule CSV</button>
+      <button class="btn secondary" id="exportProjectPackageTopBtn">Export project package</button>
+      <button class="btn warn" id="toggleModeBtn">Mode: Baseline</button>
+    </div>
+  </div>
+
+  <div class="tabs-wrap">
+    <div class="tabs">
+      <button class="tabbtn active" data-tab="setupTab">Setup</button>
+      <button class="tabbtn" data-tab="deskStudyTab">Desk Study</button>
+      <button class="tabbtn" data-tab="scheduleTab">Schedule</button>
+      <button class="tabbtn" data-tab="mapTab">Map</button>
+      <button class="tabbtn" data-tab="qaTab">QA</button>
+      <button class="tabbtn" data-tab="summaryTab">Summary</button>
+      <button class="tabbtn" data-tab="chartsTab">Charts</button>
+    </div>
+  </div>
+
+  <div class="banner" id="msg">Ready. Set up the site, run desk study checks, then import one or more CSV schedules through the mapper.</div>
+
+  <div class="stats">
+    <div class="card stat"><div class="label">Features</div><div class="value" id="statTotal">0</div></div>
+    <div class="card stat"><div class="label">A/B/C/U</div><div class="value" id="statCats">0/0/0/0</div></div>
+    <div class="card stat"><div class="label">Veteran / ancient</div><div class="value" id="statAgeFlags">0</div></div>
+    <div class="card stat"><div class="label">QA flags</div><div class="value" id="statFlags">0</div></div>
+    <div class="card stat"><div class="label">Mode</div><div class="value" id="statMode" style="font-size:18px">Baseline</div></div>
+    <div class="card stat"><div class="label">Unsaved</div><div class="value" id="unsavedBadge" style="font-size:16px">No</div></div>
+  </div>
+
+  
+  
+  
+  
+  <section id="setupTab" class="tab active">
+    <div class="section-chip">Pre-survey · Step 1</div>
+    <div class="layout">
+      <div class="stack">
+        <div class="card">
+          <div class="module-title"><h3 style="margin-top:0">1. Locate the site</h3><span class="module-tag">1</span></div>
+          <div class="field"><label>Site address / postcode</label><input id="siteAddressInput" type="text" placeholder="Enter address or postcode" /></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn secondary" id="setSiteFromAddressSetupBtn">Find postcode / address</button>
+            <button class="btn secondary" id="useSetupMapCentreBtn">Use setup map centre</button>
+            <button class="btn" id="copySiteCentreBtn">Copy site centre</button>
+            <button class="btn" id="openGoogleMapsSetupBtn">Open map search</button>
+            <button class="btn" id="openMagicSetupBtn">Open MAGIC</button>
+          </div>
+          <div class="smallgrid" style="margin-top:10px">
+            <div class="field"><label>Site centre lat</label><input id="siteLatInput" type="text" class="readonly" readonly /></div>
+            <div class="field"><label>Site centre lon</label><input id="siteLonInput" type="text" class="readonly" readonly /></div>
+          </div>
+          <div class="micro" id="siteLocationStatusSetup" style="margin-top:8px">No site location set yet.</div>
+          <div class="micro" style="margin-top:8px">If postcode lookup is blocked in your browser, use Open map search, pan to the site, then press “Use setup map centre”.</div>
+        </div>
+
+        <div class="card">
+          <div class="module-title"><h3 style="margin-top:0">2. Red line boundary</h3><span class="module-tag">2</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn secondary" id="drawRedLineBtn">Draw red line</button>
+            <button class="btn" id="stopRedLineBtn">Stop drawing</button>
+            <label class="filebtn btn secondary">Import red line GeoJSON<input id="redLineGeoJsonInput" type="file" accept=".geojson,.json" /></label>
+            <button class="btn" id="fitRedLineBtn">Fit red line</button>
+            <button class="btn" id="clearRedLineBtn">Clear red line</button>
+          </div>
+          <div class="micro" id="redLineStatus" style="margin-top:8px">No red line boundary loaded yet.</div>
+          <div class="micro" style="margin-top:8px">Draw or import a geolocated red line boundary. This is used for project setup and export.</div>
+        </div>
+
+        <div class="card">
+          <div class="module-title"><h3 style="margin-top:0">3. Topo / reference overlay</h3><span class="module-tag">3</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <label class="filebtn btn secondary">Load topo GeoJSON<input id="topoGeoJsonInput" type="file" accept=".geojson,.json" /></label>
+            <button class="btn" id="clearTopoBtn">Clear topo</button>
+          </div>
+          <div class="micro" id="topoStatus" style="margin-top:8px">No topo/reference overlay loaded yet.</div>
+          <div class="micro" style="margin-top:8px">For now this supports geolocated GeoJSON reference data. DWG is not supported here.</div>
+        </div>
+
+        <div class="card">
+          <div class="module-title"><h3 style="margin-top:0">4. Project details and export</h3><span class="module-tag">4</span></div>
+          <div class="field"><label>Project name</label><input id="projectNameInput" type="text" placeholder="e.g. Land at..." /></div>
+          <div class="field"><label>Project ID</label><input id="projectIdInput" type="text" placeholder="Optional" /></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn secondary" id="exportProjectPackageSetupBtn">Export project package</button>
+          </div>
+          <div class="micro" style="margin-top:8px">Export the setup and current survey data as a single project package for field use.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div><h3 style="margin:0">Setup map</h3><div class="micro">Use this geolocated map for site location, red line definition and topo review.</div></div>
+        </div>
+        <div id="setupMap" style="width:100%;height:690px;border:1px solid var(--line);border-radius:14px"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="scheduleTab" class="tab">
+    <div class="section-chip">Survey structure · Step 3</div>
+    <div class="layout">
+      <div class="stack">
+        <div class="card">
+          <div class="module-title"><h3 style="margin-top:0">Schedule controls</h3><span class="module-tag">3</span></div>
+          <div class="field">
+            <label>Schedule mode</label>
+            <select id="modeSelect">
+              <option value="baseline">Baseline</option>
+              <option value="aia">AIA</option>
+            </select>
+          </div>
+          <div class="micro">Late Mature is removed permanently. Development Impact only appears in AIA mode.</div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" id="addRowBtn">Add row</button>
+            <button class="btn" id="deleteScheduleBtn2">Delete schedule</button>
+            <button class="btn secondary" id="saveChangesBtn">Save changes</button>
+            <button class="btn" id="undoChangesBtn">Undo unsaved</button>
+            <button class="btn" id="runQaBtn">Run QA</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Selected row context</h3>
+          <div class="micro" id="selectedSummary">Select a row in the schedule or click a map feature.</div>
+          <div class="result-box" id="fcinResultBox" style="margin-top:12px">
+            <div class="micro">FCIN12 result not run yet.</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="module-title"><h3 style="margin-top:0">Survey schedule</h3><span class="module-tag">3</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tree ID</th>
+                <th>Species</th>
+                <th>Est Height</th>
+                <th>DBH (mm)</th>
+                <th>Canopy N</th>
+                <th>Canopy S</th>
+                <th>Canopy E</th>
+                <th>Canopy W</th>
+                <th>First Significant Branch</th>
+                <th>Canopy Clearance</th>
+                <th>Physiological Condition</th>
+                <th>Number Trees In Group</th>
+                <th>Tree Spacing</th>
+                <th>Age</th>
+                <th>Structural Condition</th>
+                <th>Condition Comments</th>
+                <th>Preliminary Management Comments</th>
+                <th class="aia-col" style="display:none">Development Impact</th>
+                <th>Estimated Remaining Contribution in Years</th>
+                <th>Category</th>
+                <th>Root Protection Area Radius (m)</th>
+              </tr>
+            </thead>
+            <tbody id="scheduleBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="mapTab" class="tab">
+    <div class="section-chip">Spatial review · Step 4</div>
+    <div class="shell">
+      <div class="card">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div><h3 style="margin:0">Map view</h3><div class="micro">RPA and canopy geometry update live as the schedule changes.</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" id="fitBtn">Fit to survey extents</button>
+            <label><input type="checkbox" id="showTrees" checked /> Trees</label>
+            <label><input type="checkbox" id="showCanopy" checked /> Canopy</label>
+            <label><input type="checkbox" id="showRpa" checked /> RPA</label>
+          </div>
+        </div>
+        <div id="map"></div>
+<div class="v53-panel" id="v53FigureBuilder">
+<h3 style="margin-top:0">Clean Report Figure Export</h3>
+<div class="v53-small">For report context figures only. Load GeoJSON layers such as SSSI, ancient woodland, priority habitat, conservation area, TPO areas or site boundary. No key is printed; use the report caption instead.</div>
+<div class="v53-grid">
+<div><label>Figure width</label><select id="v53FigureWidth"><option value="15" selected>15 cm</option><option value="17">17 cm</option><option value="19">19 cm</option></select></div>
+<div><label>Target scale</label><select id="v53ScaleSelect"><option value="manual" selected>Manual view</option><option value="500">1:500</option><option value="1000">1:1,000</option><option value="1250">1:1,250</option><option value="2500">1:2,500</option><option value="5000">1:5,000</option><option value="10000">1:10,000</option></select></div>
+<div><label>Basemap</label><select id="v53Basemap"><option value="street" selected>Street / light map</option><option value="aerial">Aerial imagery</option></select></div>
+<div><label>Title on image</label><select id="v53TitleMode"><option value="none" selected>No title</option><option value="show">Show title</option></select></div>
+</div>
+<div class="field" id="v53TitleField" style="display:none"><label>Optional figure title</label><input id="v53FigureTitleInput" type="text" placeholder="e.g. Site context in relation to nearby ancient woodland"></div>
+<div class="v53-tools">
+<button class="btn secondary" id="v53LoadOverlayBtn">Load GeoJSON overlay(s)</button><input type="file" id="v53OverlayInput" accept=".geojson,.json" multiple style="display:none">
+<button class="btn" id="v53ApplyScaleBtn">Apply selected scale</button><button class="btn" id="v53ClearOverlaysBtn">Clear overlays</button>
+<button class="btn" id="v53MeasureDistanceBtn">Measure distance</button><button class="btn" id="v53MeasureAreaBtn">Measure area</button><button class="btn" id="v53ClearMeasureBtn">Clear measure</button><button class="btn primary" id="v53ExportFigureBtn">Export clean PNG</button>
+</div><div id="v53LayerList" class="v53-layer-list"></div><div class="v53-note">Caption the figure in the report. The image only includes the map, overlays, optional title, north arrow and scale bar.</div></div>
+<div id="v53FigureScratch" style="position:fixed;left:-99999px;top:0;z-index:-1"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Map notes</h3>
+        <div class="micro">Ancient woodland policy buffers are not applied automatically here. Tree RPAs and desk study / CAD constraints should remain separate.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="qaTab" class="tab">
+    <div class="section-chip">Review · Step 5</div>
+    <div class="layout">
+      <div class="stack">
+        <div class="card">
+          <h3 style="margin-top:0">QA principles</h3>
+          <div class="micro">Arithmetic and schedule logic checks run automatically. FCIN12 outputs are used as plausibility checks, not automatic reclassification.</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Current QA flags</h3>
+        <div class="flag-list" id="qaFlags"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="summaryTab" class="tab">
+    <div class="section-chip">Outputs · Step 6</div>
+    <div class="layout">
+      <div class="stack">
+        <div class="card">
+          <h3 style="margin-top:0">Schedule summary</h3>
+          <div class="smallgrid">
+            <div class="result-box"><div class="micro">Total features</div><div class="big" id="sumTotal">0</div></div>
+            <div class="result-box"><div class="micro">Veteran / ancient</div><div class="big" id="sumVA">0</div></div>
+            <div class="result-box"><div class="micro">Largest DBH used</div><div class="big" id="sumLargestDbh">—</div></div>
+            <div class="result-box"><div class="micro">Largest RPA</div><div class="big" id="sumLargestRpa">—</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Category breakdown</h3>
+          <div id="summaryCats" class="micro">No data yet.</div>
+          <h3 style="margin:16px 0 8px 0">Age distribution</h3>
+          <div id="summaryAges" class="micro">No data yet.</div>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3 style="margin-top:0">Species summary</h3>
+          <div class="table-wrap" style="max-height:240px">
+            <table style="min-width:600px">
+              <thead><tr><th>Species</th><th>Count</th><th>%</th></tr></thead>
+              <tbody id="summarySpecies"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+            <h3 style="margin-top:0">Report-ready summary text</h3>
+            <button class="btn secondary" id="copySummaryBtn">Copy summary text</button>
+          </div>
+          <textarea id="reportSummaryText" class="readonly" readonly style="min-height:220px"></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="chartsTab" class="tab">
+    <div class="section-chip">Visual outputs · Step 7</div>
+    <div class="layout">
+      <div class="stack">
+        <div class="card">
+          <h3 style="margin-top:0">Category distribution</h3>
+          <div class="chart-box" id="categoryChart"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Age distribution</h3>
+          <div class="chart-box" id="ageChart"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Species summary</h3>
+        <div class="table-wrap" style="max-height:260px">
+          <table style="min-width:600px">
+            <thead><tr><th>Species</th><th>Count</th></tr></thead>
+            <tbody id="speciesSummary"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  
+  <section id="deskStudyTab" class="tab">
+    <div class="section-chip">Pre-survey · Step 2</div>
+    <div class="layout">
+      <div class="stack">
+        <div class="card">
+          <div class="module-title"><h3 style="margin-top:0">Desk study launcher</h3><span class="module-tag">DS</span></div>
+          <div class="field"><label>Site name</label><input id="dsSiteName" type="text" placeholder="e.g. Land at..." /></div>
+          <div class="field"><label>Address / postcode</label><input id="dsAddress" type="text" placeholder="Enter address or postcode" /></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn secondary" id="setSiteFromAddressBtn">Set site from address</button>
+            <button class="btn secondary" id="useMapCentreBtn">Use current map centre</button>
+            <button class="btn secondary" id="openMagicBtn">Open MAGIC</button>
+            <button class="btn" id="openAwBtn">Open ancient woodland search</button>
+            <button class="btn" id="openGoogleMapsBtn">Open map search</button>
+            <button class="btn" id="openAtiBtn">Open ATI</button>
+          </div>
+          <div class="micro" id="siteLocationStatus" style="margin-top:8px">No site location set yet.</div>
+          <div class="micro" style="margin-top:8px">These are assisted desk study links using the correct MAGIC and ancient woodland inventory entry points. MAGIC now uses your full saved preset URL and swaps in only the box extent, so the chosen layers should remain preloaded.</div>
+          <div class="field" style="margin-top:10px">
+            <label>Constraint layer overlay (GeoJSON)</label>
+            <label class="filebtn">Load overlay<input id="constraintGeojsonFile" type="file" accept=".geojson,.json" /></label>
+          </div>
+          <div class="micro">For shapefiles, export or convert to GeoJSON first, then load the layer here for visual overlay on the map.</div>
+        </div>
+        <div class="card">
+          <div class="module-title"><h3 style="margin-top:0">Structured desk study inputs</h3><span class="module-tag">DS</span></div>
+          <div class="field"><label>Planning authority / authorities</label><input id="dsLpa" type="text" /></div>
+          <div class="field"><label>TPO</label><input id="dsTpo" type="text" placeholder="Present / ref / type / date" /></div>
+          <div class="field"><label>Conservation Area</label><input id="dsCa" type="text" /></div>
+          <div class="field"><label>Ancient woodland / PAWS</label><input id="dsAw" type="text" placeholder="On site / nearby / none recorded" /></div>
+          <div class="field"><label>SSSI</label><input id="dsSssi" type="text" /></div>
+          <div class="field"><label>Soils / geology</label><input id="dsSoils" type="text" /></div>
+          <div class="field"><label>Validation links / notes</label><textarea id="dsLinks" placeholder="Paste links or validation notes here"></textarea></div>
+          <div class="field"><label>Site boundary GeoJSON</label><label class="filebtn">Load site boundary<input id="siteBoundaryFile" type="file" accept=".geojson,.json" /></label></div>
+          <div class="field"><label>LPA boundary GeoJSON</label><label class="filebtn">Load LPA layer<input id="lpaBoundaryFile" type="file" accept=".geojson,.json" /></label></div>
+          <div class="field"><label>National Park boundary GeoJSON</label><label class="filebtn">Load National Park layer<input id="npaBoundaryFile" type="file" accept=".geojson,.json" /></label></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn secondary" id="identifyAuthoritiesBtn">Identify Planning Authorities</button>
+            <button class="btn" id="clearAuthorityLayersBtn">Clear authority layers</button>
+          </div>
+          <div class="micro" id="authorityStatus" style="margin-top:8px">No planning authority layers loaded yet.</div>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+            <h3 style="margin-top:0">Desk study output block</h3>
+            <button class="btn secondary" id="buildDeskStudyBtn">Build output</button>
+          </div>
+          <textarea id="deskStudyOutput" class="readonly" readonly style="min-height:320px"></textarea>
+          <div class="result-box" style="margin-top:10px">
+            <div class="micro"><strong>Planning authority result</strong></div>
+            <div class="micro" id="planningAuthorityResult">No authority result yet.</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Desk study principles</h3>
+          <div class="micro">
+            Ancient woodland status should not be determined from the arboricultural survey alone. Use official inventory data or ecological input where relevant. The survey tool records and structures findings; it does not apply ancient woodland buffers automatically.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<div id="csvMapperModal" class="csv-modal">
+  <div class="csv-dialog">
+    <div class="module-title"><h3 style="margin:0">CSV mapper</h3><span class="module-tag">CSV</span></div>
+    <div class="micro" id="csvMapperIntro">Map the uploaded CSV columns to the schedule fields, choose the coordinate system, preview the result, then import.</div>
+    <div class="csv-grid" style="margin-top:12px">
+      <div class="stack">
+        <div class="card">
+          <div class="field"><label>Source file</label><input id="csvSourceName" type="text" class="readonly" readonly /></div>
+          <div class="field"><label>Feature type for this file</label>
+            <select id="csvFeatureType">
+              <option value="T">Individual trees</option>
+              <option value="G">Groups</option>
+              <option value="H">Hedgerows</option>
+              <option value="W">Woodlands</option>
+            </select>
+          </div>
+          <div class="field"><label>Coordinate system</label>
+            <select id="csvCoordType">
+              <option value="bng">British National Grid (EPSG:27700)</option>
+              <option value="latlon">Latitude / Longitude (EPSG:4326)</option>
+              <option value="none">No coordinates</option>
+            </select>
+          </div>
+          <div class="field"><label>Swap X / Y</label>
+            <select id="csvSwapXY">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </div>
+          <div class="field"><label>Import mode</label>
+            <input id="csvImportMode" type="text" class="readonly" readonly />
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Field mapping</h3>
+          <div id="csvMappingFields"></div>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="module-title"><h3 style="margin-top:0">Preview</h3><span class="module-tag">P</span></div>
+          <div class="row" style="margin-bottom:10px">
+            <button class="btn secondary" id="csvPreviewBtn">Preview import</button>
+            <button class="btn primary" id="csvImportCommitBtn">Import CSV</button>
+            <button class="btn" id="csvMapperCancelBtn">Cancel</button>
+          </div>
+          <div id="csvPreviewSummary" class="csv-map-help">No preview yet.</div>
+          <div class="csv-preview-table" style="margin-top:10px"><table><thead id="csvPreviewHead"></thead><tbody id="csvPreviewBody"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.9.0/dist/proj4.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script>
+proj4.defs("EPSG:27700","+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.4894 +units=m +no_defs +type=crs");
+
+const state = {
+  mode:"baseline",
+  rows:[],
+  savedRows:[],
+  selectedIndex:null,
+  qa:[],
+  hasUnsavedChanges:false,
+  map:null,
+  treeLayer:null,
+  canopyLayer:null,
+  rpaLayer:null,
+  constraintLayer:null,
+  constraintData:null,
+  siteCenter:null,
+  siteBoxBng:null,
+  lpaData:null,
+  npaData:null,
+  siteBoundaryData:null,
+  authorityLayer:null,
+  projectMeta:{project_name:"",project_id:"",site_address:"",site_centre:{lat:null,lon:null}},
+  redLineData:null,
+  redLineLayer:null,
+  redLineSetupLayer:null,
+  topoData:null,
+  topoLayer:null,
+  topoSetupLayer:null,
+  setupMap:null,
+  _syncingMaps:false,
+  drawingRedLine:false,
+  activeRedLineDrawer:null,
+  usingDemoRows:false,
+  csvMapper:null,
+  csvQueue:[],
+  csvPreviewLayer:null
+};
+
+const demoRows = [
+  {tree_id:"T1*",x:"530100",y:"180200",species:"Oak (Quercus robur)",est_height:"18",stem_diameter:"620",combined_stem_diameter:"",n:"6",s:"6",e:"6",w:"6",first_sig_branch:"4",canopy_clearance:"3",phys_condition:"Good",num_group:"",tree_spacing:"",age:"Veteran",struct_condition:"Good",condition_comments:"Broad veteran oak with deadwood habitat.",prelim_comments:"Retain and protect.",development_impact:"No works proposed.",remaining_years:"40+",category:"A1",rpa_radius:""},
+  {tree_id:"G2*",x:"530155",y:"180248",species:"Mixed broadleaf group",est_height:"5",stem_diameter:"350",combined_stem_diameter:"",n:"3",s:"3",e:"3",w:"3",first_sig_branch:"n/a",canopy_clearance:"0",phys_condition:"Good - Dead",num_group:"12",tree_spacing:"2-3m",age:"Young",struct_condition:"Good - Dead",condition_comments:"Outgrown hedge / group edge condition.",prelim_comments:"Monitor dead stems.",development_impact:"Partial trimming may be required.",remaining_years:"10+",category:"C2",rpa_radius:""},
+  {tree_id:"T3",x:"530210",y:"180296",species:"Sycamore (Acer pseudoplatanus)",est_height:"12",stem_diameter:"320",combined_stem_diameter:"",n:"4",s:"4",e:"4",w:"4",first_sig_branch:"3",canopy_clearance:"2.5",phys_condition:"Good",num_group:"",tree_spacing:"",age:"Early Mature",struct_condition:"Good",condition_comments:"Typical roadside tree.",prelim_comments:"Monitor.",development_impact:"Light pruning only.",remaining_years:"20+",category:"B1",rpa_radius:""},
+  {tree_id:"T4",x:"530265",y:"180344",species:"Hawthorn (Crataegus monogyna)",est_height:"6",stem_diameter:"110",combined_stem_diameter:"",n:"2",s:"2",e:"2",w:"2",first_sig_branch:"2",canopy_clearance:"1.5",phys_condition:"Fair",num_group:"",tree_spacing:"",age:"Semi-mature",struct_condition:"Fair",condition_comments:"Dense crown, minor defects.",prelim_comments:"None.",development_impact:"None.",remaining_years:"10+",category:"C1",rpa_radius:""},
+  {tree_id:"W1",x:"530320",y:"180392",species:"Woodland block",est_height:"14",stem_diameter:"300",combined_stem_diameter:"",n:"16",s:"18",e:"20",w:"15",first_sig_branch:"n/a",canopy_clearance:"0",phys_condition:"Good",num_group:"40",tree_spacing:"variable",age:"Mature",struct_condition:"Good",condition_comments:"Woodland edge with mixed age structure.",prelim_comments:"Retain with buffer.",development_impact:"Avoid incursion.",remaining_years:"20+",category:"B3",rpa_radius:""}
+];
+
+const scheduleColumns = ["uid","tree_id","x","y","species","est_height","stem_diameter","combined_stem_diameter","n","s","e","w","first_sig_branch","canopy_clearance","phys_condition","num_group","tree_spacing","age","struct_condition","condition_comments","prelim_comments","development_impact","remaining_years","category","rpa_radius"];
+
+function num(v){ const n=Number(String(v??"").replace(/[^0-9.\-]/g,"")); return Number.isFinite(n)?n:null; }
+function catBase(cat){ const s=String(cat||"").trim().toUpperCase(); if(s.startsWith("A"))return "A"; if(s.startsWith("B"))return "B"; if(s.startsWith("C"))return "C"; if(s.startsWith("U"))return "U"; return ""; }
+function featureType(id){ const s=String(id||"").trim().toUpperCase(); return s ? s[0] : "T"; }
+function treeColor(cat){ const c=catBase(cat); if(c==="A")return "#1f7a4c"; if(c==="B")return "#315f8a"; if(c==="C")return "#667085"; if(c==="U")return "#c1121f"; return "#667085"; }
+function toLatLng(x,y){ try{ const out=proj4("EPSG:27700","EPSG:4326",[x,y]); return [out[1],out[0]]; }catch(e){ return null; } }
+function ageEnhanced(age){ const s=String(age||"").trim().toLowerCase(); return s==="veteran" || s==="ancient"; }
+function ageOptions(value=""){ const opts=["Young","Semi-mature","Early Mature","Mature","Veteran","Ancient"]; return `<select data-col="age">${opts.map(o=>`<option value="${o}" ${o.toLowerCase()===String(value).toLowerCase()?"selected":""}>${o}</option>`).join("")}</select>`; }
+function categoryOptions(value="C1"){ const opts=["A1","A2","A3","B1","B2","B3","C1","C2","C3","U"]; return `<select data-col="category">${opts.map(o=>`<option value="${o}" ${o===String(value).trim()?"selected":""}>${o}</option>`).join("")}</select>`; }
+
+function parseDbhField(text){
+  const raw = String(text || "").trim();
+  if(!raw) return [];
+  return raw.split(/[,;\/\s]+/).map(v => num(v)).filter(v => v !== null && v > 0);
+}
+function effectiveDbhMm(row){
+  const parts = parseDbhField(row.stem_diameter);
+  if(parts.length > 1){
+    if(parts.length <= 6) return Math.sqrt(parts.reduce((acc,v)=>acc + v*v, 0));
+    const mean = parts.reduce((a,b)=>a+b,0)/parts.length;
+    return mean * Math.sqrt(parts.length);
+  }
+  if(parts.length === 1) return parts[0];
+  return null;
+}
+function recomputeRow(row){
+  const type = featureType(row.tree_id);
+  const parts = parseDbhField(row.stem_diameter);
+  const eff = effectiveDbhMm(row);
+  row.combined_stem_diameter = (parts.length > 1 && eff !== null) ? eff.toFixed(1) : "";
+
+  let rpa = null;
+  if(eff !== null && eff > 0){
+    const standardRpa = Math.min((eff / 1000) * 12, 15);
+    rpa = standardRpa;
+    if(type === "T" && ageEnhanced(row.age)){
+      const n=num(row.n), s=num(row.s), e=num(row.e), w=num(row.w);
+      const enhanced = (eff / 1000) * 15;
+      const canopyWidth = Math.max(n||0,s||0,e||0,w||0) * 2;
+      const canopyPlus5 = canopyWidth ? canopyWidth + 5 : 0;
+      rpa = Math.max((eff / 1000) * 12, enhanced, canopyPlus5);
+    }
+  }
+  row.rpa_radius = rpa !== null ? (rpa.toFixed(1) + (parts.length > 1 ? "*" : "")) : "";
+  return row;
+}
+
+function buildRowHtml(row, idx){
+  const worksDisplay=state.mode==="aia" ? "" : 'style="display:none"';
+  return `<tr data-index="${idx}">
+    <td><input data-col="tree_id" value="${row.tree_id||""}" /></td>
+    <td><input data-col="species" value="${row.species||""}" /></td>
+    <td><input data-col="est_height" value="${row.est_height||""}" /></td>
+    <td><input data-col="stem_diameter" value="${row.stem_diameter||""}" placeholder="e.g. 450 or 120/110/95" style="min-width:150px" /></td>
+    <td><input data-col="n" value="${row.n||""}" /></td>
+    <td><input data-col="s" value="${row.s||""}" /></td>
+    <td><input data-col="e" value="${row.e||""}" /></td>
+    <td><input data-col="w" value="${row.w||""}" /></td>
+    <td><input data-col="first_sig_branch" value="${row.first_sig_branch||""}" /></td>
+    <td><input data-col="canopy_clearance" value="${row.canopy_clearance||""}" /></td>
+    <td><input data-col="phys_condition" value="${row.phys_condition||""}" /></td>
+    <td><input data-col="num_group" value="${row.num_group||""}" /></td>
+    <td><input data-col="tree_spacing" value="${row.tree_spacing||""}" /></td>
+    <td>${ageOptions(row.age||"")}</td>
+    <td><input data-col="struct_condition" value="${row.struct_condition||""}" /></td>
+    <td><textarea data-col="condition_comments">${row.condition_comments||""}</textarea></td>
+    <td><textarea data-col="prelim_comments">${row.prelim_comments||""}</textarea></td>
+    <td class="aia-col" ${worksDisplay}><textarea data-col="development_impact">${row.development_impact||""}</textarea></td>
+    <td><input data-col="remaining_years" value="${row.remaining_years||""}" /></td>
+    <td>${categoryOptions(row.category||"C1")}</td>
+    <td><input data-col="rpa_radius" class="readonly" readonly value="${row.rpa_radius||""}" /></td>
+  </tr>`;
+}
+
+function updateUnsavedBadge(){
+  const el=document.getElementById("unsavedBadge");
+  el.textContent = state.hasUnsavedChanges ? "Yes" : "No";
+}
+function markChangedRows(){
+  document.querySelectorAll('#scheduleBody tr').forEach((tr, idx) => {
+    const current = JSON.stringify(state.rows[idx] || {});
+    const prev = JSON.stringify(state.savedRows[idx] || {});
+    tr.classList.toggle('changed-row', current !== prev);
+  });
+}
+function renderSchedule(){
+  const body = document.getElementById("scheduleBody");
+  body.innerHTML = state.rows.map((r,i)=>buildRowHtml(r,i)).join("");
+  document.querySelectorAll('.aia-col').forEach(el => el.style.display = state.mode==="aia" ? "" : "none");
+  body.querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => {
+    state.selectedIndex = Number(tr.dataset.index);
+    updateSelectedSummary();
+  }));
+  body.querySelectorAll('input, select, textarea').forEach(el => {
+    ['input','change','blur','keyup'].forEach(evt => el.addEventListener(evt, onScheduleEdit));
+  });
+  markChangedRows();
+}
+function onScheduleEdit(e){
+  const tr=e.target.closest('tr'); if(!tr) return;
+  const idx=Number(tr.dataset.index), col=e.target.dataset.col; if(!state.rows[idx] || !col) return;
+  state.rows[idx][col]=e.target.value;
+  recomputeRow(state.rows[idx]);
+  const rpaInput = tr.querySelector('input[data-col="rpa_radius"]');
+  if(rpaInput) rpaInput.value = state.rows[idx].rpa_radius || "";
+  state.hasUnsavedChanges = true;
+  updateUnsavedBadge();
+  runQa(false);
+  renderStats();
+  renderCharts();
+  renderSummary();
+  renderMap();
+  updateSelectedSummary();
+  markChangedRows();
+}
+function loadRows(rows){
+  state.rows = rows.map(r => {
+    const mapped={}; scheduleColumns.forEach(c => mapped[c]=r[c]??""); mapped.uid = r.uid || mapped.uid || ""; mapped._geometry = r._geometry || null;
+    return recomputeRow(mapped);
+  });
+  state.savedRows = JSON.parse(JSON.stringify(state.rows));
+  state.hasUnsavedChanges=false;
+  updateUnsavedBadge();
+  renderSchedule();
+  runQa(false);
+  renderStats();
+  renderCharts();
+  renderSummary();
+  renderMap();
+}
+function addBlankRow(){
+  state.usingDemoRows=false;
+  state.rows.push(recomputeRow({tree_id:"",x:"",y:"",species:"",est_height:"",stem_diameter:"",combined_stem_diameter:"",n:"",s:"",e:"",w:"",first_sig_branch:"",canopy_clearance:"",phys_condition:"",num_group:"",tree_spacing:"",age:"",struct_condition:"",condition_comments:"",prelim_comments:"",development_impact:"",remaining_years:"",category:"C1",rpa_radius:""}));
+  state.hasUnsavedChanges=true;
+  updateUnsavedBadge();
+  renderSchedule();
+  renderStats();
+  renderSummary();
+}
+function saveChanges(){
+  state.savedRows = JSON.parse(JSON.stringify(state.rows));
+  state.hasUnsavedChanges=false;
+  updateUnsavedBadge();
+  markChangedRows();
+  document.getElementById('msg').textContent='Changes saved in the working session.';
+}
+function undoUnsavedChanges(){
+  state.rows = JSON.parse(JSON.stringify(state.savedRows||[]));
+  state.hasUnsavedChanges=false;
+  updateUnsavedBadge();
+  renderSchedule();
+  runQa(false);
+  renderStats();
+  renderCharts();
+  renderSummary();
+  renderMap();
+  updateSelectedSummary();
+  document.getElementById('msg').textContent='Unsaved changes reverted.';
+}
+
+function runQa(showMessage){
+  const flags=[];
+  state.rows.forEach((r, idx) => {
+    const id=r.tree_id || `Row ${idx+1}`;
+    const eff=effectiveDbhMm(r);
+    const rpa=num(String(r.rpa_radius||"").replace("*",""));
+    const type=featureType(r.tree_id);
+    const cat=catBase(r.category);
+    const age=String(r.age||"").toLowerCase();
+
+    if(!r.tree_id) flags.push({type:"review", text:`${id}: missing Tree ID.`});
+    if(!r.species) flags.push({type:"review", text:`${id}: missing Species.`});
+    if(!r.stem_diameter) flags.push({type:"review", text:`${id}: missing DBH information.`});
+    if(!r.age) flags.push({type:"review", text:`${id}: missing Age class.`});
+    if(!r.category) flags.push({type:"review", text:`${id}: missing Category.`});
+    if(!r.struct_condition) flags.push({type:"review", text:`${id}: missing Structural Condition.`});
+    if(!r.phys_condition) flags.push({type:"review", text:`${id}: missing Physiological Condition.`});
+
+    if(eff !== null && rpa !== null){
+      let expected=Math.min((eff/1000)*12, 15);
+      if(type==="T" && ageEnhanced(r.age)){
+        const n=num(r.n), s=num(r.s), e=num(r.e), w=num(r.w);
+        expected=Math.max((eff/1000)*12, (eff/1000)*15, (Math.max(n||0,s||0,e||0,w||0)*2)+5);
+      }
+      if(Math.abs(rpa-expected) > 0.15) flags.push({type:"review", text:`${id}: RPA does not match the current DBH-based rule.`});
+    }
+    if(type==="T" && (!r.n || !r.s || !r.e || !r.w)) flags.push({type:"review", text:`${id}: canopy spread fields are incomplete.`});
+    if(age==="veteran" && eff !== null && eff < 400) flags.push({type:"review", text:`${id}: veteran age class should be checked against size and observed features.`});
+    if(age==="ancient" && eff !== null && eff < 500) flags.push({type:"review", text:`${id}: ancient age class should be checked against size, context and evidence.`});
+    if((age==="young" || age==="semi-mature") && eff !== null && eff > 700) flags.push({type:"review", text:`${id}: recorded age class may be understated relative to DBH.`});
+    if(cat==="A" && /poor|dead|declin/i.test(String(r.struct_condition)+" "+String(r.phys_condition))) flags.push({type:"review", text:`${id}: Category A should be checked against recorded condition.`});
+    if(eff !== null && !ageEnhanced(r.age) && (eff/1000)*12 > 15) flags.push({type:"info", text:`${id}: standard RPA has been capped at 15m.`});
+  });
+  state.qa=flags;
+  renderQa();
+  if(showMessage) document.getElementById("msg").textContent = flags.length ? `QA run complete. ${flags.length} flag(s) generated.` : "QA run complete. No arithmetic or structure flags found.";
+}
+function renderQa(){
+  const box=document.getElementById("qaFlags");
+  box.innerHTML = state.qa.length ? state.qa.map(f => `<div class="flag ${f.type}"><strong>${f.type.toUpperCase()}</strong><br>${f.text}</div>`).join("") : '<div class="flag info">No current arithmetic or structure flags.</div>';
+}
+
+function renderStats(){
+  let A=0,B=0,C=0,U=0,enh=0;
+  state.rows.forEach(r => { const c=catBase(r.category); if(c==="A")A++; if(c==="B")B++; if(c==="C")C++; if(c==="U")U++; if(ageEnhanced(r.age)) enh++; });
+  document.getElementById("statTotal").textContent=state.rows.length;
+  document.getElementById("statCats").textContent=`${A}/${B}/${C}/${U}`;
+  document.getElementById("statAgeFlags").textContent=enh;
+  document.getElementById("statFlags").textContent=state.qa.length;
+  document.getElementById("statMode").textContent=state.mode==="aia" ? "AIA" : "Baseline";
+}
+function makeBars(targetId, data, classes){
+  const box=document.getElementById(targetId), max=Math.max(...Object.values(data),1);
+  box.innerHTML = Object.entries(data).map(([k,v],i) => `<div class="bar ${classes[i]||""}" style="height:${Math.max(18,Math.round((v/max)*150))}px"><div class="bar-label">${k}<br>${v}</div></div>`).join("");
+}
+function renderSummary(){
+  const total = state.rows.length;
+  let veteranAncient = 0, largestDbh = null, largestRpa = null;
+  const cats = {A:0,B:0,C:0,U:0};
+  const ages = {"Young":0,"Semi-mature":0,"Early Mature":0,"Mature":0,"Veteran":0,"Ancient":0};
+  const species = {};
+  state.rows.forEach(r => {
+    const eff = effectiveDbhMm(r);
+    const rpa = num(String(r.rpa_radius||"").replace("*",""));
+    if(ageEnhanced(r.age)) veteranAncient++;
+    const c=catBase(r.category); if(c) cats[c]++;
+    if(ages.hasOwnProperty(r.age)) ages[r.age]++;
+    if(r.species) species[r.species]=(species[r.species]||0)+1;
+    if(eff !== null && (largestDbh===null || eff>largestDbh)) largestDbh=eff;
+    if(rpa !== null && (largestRpa===null || rpa>largestRpa)) largestRpa=rpa;
+  });
+  const setText=(id,val)=>{const el=document.getElementById(id); if(el) el.textContent=val;};
+  setText('sumTotal', total);
+  setText('sumVA', veteranAncient);
+  setText('sumLargestDbh', largestDbh!==null ? `${largestDbh.toFixed(1)} mm` : '—');
+  setText('sumLargestRpa', largestRpa!==null ? `${largestRpa.toFixed(1)} m` : '—');
+  document.getElementById('summaryCats').innerHTML = `A: ${cats.A} &nbsp;&nbsp; B: ${cats.B} &nbsp;&nbsp; C: ${cats.C} &nbsp;&nbsp; U: ${cats.U}`;
+  document.getElementById('summaryAges').innerHTML = Object.entries(ages).map(([k,v])=>`${k}: ${v}`).join(' &nbsp;&nbsp; ');
+  const speciesBody=document.getElementById('summarySpecies');
+  const entries=Object.entries(species).sort((a,b)=>b[1]-a[1]);
+  speciesBody.innerHTML = entries.length ? entries.map(([name,count])=>{
+    const pct=total?((count/total)*100).toFixed(1):'0.0';
+    return `<tr><td>${name}</td><td>${count}</td><td>${pct}%</td></tr>`;
+  }).join('') : '<tr><td colspan="3">No species loaded.</td></tr>';
+  document.getElementById('reportSummaryText').value = [
+    `The surveyed tree population comprises ${total} feature${total===1?'':'s'}, including ${cats.A} Category A, ${cats.B} Category B, ${cats.C} Category C and ${cats.U} Category U feature${total===1?'':'s'}.`,
+    `${veteranAncient} feature${veteranAncient===1?' is':'s are'} currently recorded as veteran or ancient.`,
+    largestDbh!==null ? `The largest DBH used for calculation is ${largestDbh.toFixed(1)}mm.` : `No DBH data are currently available.`,
+    largestRpa!==null ? `The largest calculated RPA radius is ${largestRpa.toFixed(1)}m.` : `No RPA values are currently available.`,
+    state.qa.length ? `${state.qa.length} QA flag${state.qa.length===1?' has':'s have'} been generated and should be reviewed.` : `No current QA flags have been generated.`
+  ].join('\n\n');
+}
+function copySummaryText(){
+  const txt=document.getElementById('reportSummaryText');
+  txt.select(); txt.setSelectionRange(0,99999);
+  try{ document.execCommand('copy'); document.getElementById('msg').textContent='Summary text copied.'; }
+  catch(e){ document.getElementById('msg').textContent='Could not copy summary text automatically.'; }
+}
+function renderCharts(){
+  const cats={A:0,B:0,C:0,U:0};
+  const ages={"Young":0,"Semi-mature":0,"Early Mature":0,"Mature":0,"Veteran":0,"Ancient":0};
+  const species={};
+  state.rows.forEach(r => { const c=catBase(r.category); if(c) cats[c]++; if(ages.hasOwnProperty(r.age)) ages[r.age]++; if(r.species) species[r.species]=(species[r.species]||0)+1; });
+  makeBars("categoryChart", cats, ["green","","grey","red"]);
+  makeBars("ageChart", ages, ["green","","","","red","red"]);
+  document.getElementById("speciesSummary").innerHTML = Object.entries(species).sort((a,b)=>b[1]-a[1]).map(([s,n])=>`<tr><td>${s}</td><td>${n}</td></tr>`).join("") || '<tr><td colspan="2">No species loaded.</td></tr>';
+}
+
+function updateSelectedSummary(){
+  const el=document.getElementById("selectedSummary");
+  if(state.selectedIndex===null || !state.rows[state.selectedIndex]){ el.textContent="Select a row in the schedule or click a map feature."; return; }
+  const r=state.rows[state.selectedIndex], type=featureType(r.tree_id);
+  el.innerHTML=`<strong>${r.tree_id||("Row "+(state.selectedIndex+1))}</strong><br>
+  Feature type: ${type}<br>
+  Species: ${r.species||"—"}<br>
+  Age: ${r.age||"—"}<br>
+  Category: ${r.category||"—"}<br>
+  X/Y: ${(r.x||"—")} / ${(r.y||"—")}<br>
+  DBH field: ${r.stem_diameter||"—"}<br>
+  Combined stem diameter (background): ${r.combined_stem_diameter||"—"} mm<br>
+  Displayed RPA: ${r.rpa_radius||"—"} m<br>
+  Rule: ${featureType(r.tree_id)==="W" ? "Woodland / belt feature uses DBH-based RPA only, capped at 15m unless separate planning constraints apply." : (ageEnhanced(r.age) && featureType(r.tree_id)==="T" ? "Enhanced rule (15 × DBH or canopy width + 5m), no cap." : "Standard rule (12 × DBH), capped at 15m.")}`;
+}
+
+function syncMaps(source, target){
+  if(!source || !target) return;
+  source.on('moveend zoomend', function(){
+    if(state._syncingMaps) return;
+    state._syncingMaps = true;
+    target.setView(source.getCenter(), source.getZoom(), {animate:false});
+    state._syncingMaps = false;
+  });
+}
+function initMap(){
+  state.map = L.map("map").setView([51.505,-0.12], 14);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"&copy; OpenStreetMap contributors &copy; CARTO",subdomains:"abcd",maxZoom:20}).addTo(state.map);
+  state.map.on("click", function(e){ setSiteBoxFromLatLon(e.latlng.lat, e.latlng.lng, 500); document.getElementById("msg").textContent = "Site location set from map click."; });
+  state.setupMap = L.map("setupMap").setView([51.505,-0.12], 14);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"&copy; OpenStreetMap contributors &copy; CARTO",subdomains:"abcd",maxZoom:20}).addTo(state.setupMap);
+  state.setupMap.on("click", function(e){ if(state.drawingRedLine) return; /* passive while drawing; use setup map centre button to confirm location */ });
+  syncMaps(state.map, state.setupMap);
+  syncMaps(state.setupMap, state.map);
+  state.setupMap.on(L.Draw.Event.CREATED, function(e){
+    if(!state.drawingRedLine) return;
+    state.redLineData = {type:"FeatureCollection", features:[e.layer.toGeoJSON()]};
+    renderRedLine();
+    stopRedLineDraw("Red line boundary drawn.");
+  });
+  state.setupMap.on('draw:drawstop', function(){
+    if(state.drawingRedLine) stopRedLineDraw();
+  });
+}
+function clearLayer(name){ if(state[name]){ state.map.removeLayer(state[name]); state[name]=null; } }
+function rowLatLng(r, idx){
+  const x=num(r.x), y=num(r.y);
+  if(x!==null && y!==null){
+    const ll=toLatLng(x,y);
+    if(ll) return ll;
+  }
+  return toLatLng(530100+(idx*55), 180200+(idx*48));
+}
+function fitToSurveyExtents(){ if(state.treeLayer){ state.map.fitBounds(state.treeLayer.getBounds().pad(0.2)); } }
+function renderMap(){
+  if(!state.map) return;
+  clearLayer("treeLayer"); clearLayer("canopyLayer"); clearLayer("rpaLayer");
+  const treeLayers=[], canopyLayers=[], rpaLayers=[];
+  const showTrees=document.getElementById("showTrees").checked, showCanopy=document.getElementById("showCanopy").checked, showRpa=document.getElementById("showRpa").checked;
+  state.rows.forEach((r, idx) => {
+    const latlng=rowLatLng(r, idx), color=treeColor(r.category), canopy=Math.max(num(r.n)||0,num(r.s)||0,num(r.e)||0,num(r.w)||0), rpa=num(String(r.rpa_radius||"").replace("*",""))||0;
+    if(showRpa && rpa) rpaLayers.push(L.circle(latlng,{radius:rpa,color:"#315f8a",weight:1.5,fillColor:"#9ec5e6",fillOpacity:0.15,dashArray:"5 5"}));
+    if(showCanopy && canopy) canopyLayers.push(L.circle(latlng,{radius:canopy,color:color,weight:2,fillColor:color,fillOpacity:0.18}));
+    if(showTrees){
+      const marker=L.circleMarker(latlng,{radius:5,color:"#000",weight:1,fillColor:color,fillOpacity:1});
+      marker.on("click", ()=>{ state.selectedIndex=idx; updateSelectedSummary(); });
+      marker.bindPopup(`<strong>${r.tree_id||("Row "+(idx+1))}</strong><br>${r.species||"—"}<br>RPA: ${r.rpa_radius||"—"} m`);
+      treeLayers.push(marker);
+    }
+  });
+  if(rpaLayers.length) state.rpaLayer=L.featureGroup(rpaLayers).addTo(state.map);
+  if(canopyLayers.length) state.canopyLayer=L.featureGroup(canopyLayers).addTo(state.map);
+  if(treeLayers.length){ state.treeLayer=L.featureGroup(treeLayers).addTo(state.map); state.map.fitBounds(state.treeLayer.getBounds().pad(0.2)); }
+  renderConstraintLayer();
+  renderAuthorityLayers();
+  renderTopo();
+  renderRedLine();
+}
+
+function exportScheduleCsv(){
+  const headers=scheduleColumns.filter(c => state.mode==="aia" || c!=="development_impact");
+  const headerMap={
+    tree_id:"Tree ID", x:"X", y:"Y", species:"Species", est_height:"Est Height", stem_diameter:"DBH (mm)", combined_stem_diameter:"Combined Stem Diameter (mm)",
+    n:"Canopy N", s:"Canopy S", e:"Canopy E", w:"Canopy W", first_sig_branch:"First Significant Branch",
+    canopy_clearance:"Canopy Clearance", phys_condition:"Physiological Condition", num_group:"Number Trees In Group", tree_spacing:"Tree Spacing",
+    age:"Age", struct_condition:"Structural Condition", condition_comments:"Condition Comments", prelim_comments:"Preliminary Management Comments",
+    development_impact:"Development Impact", remaining_years:"Estimated Remaining Contribution in Years", category:"Category", rpa_radius:"Root Protection Area Radius (m)"
+  };
+  const csv=[[...headers.map(h=>headerMap[h])].join(",")].concat(state.rows.map(r => headers.map(h => `"${String(r[h]??"").replace(/"/g,'""')}"`).join(","))).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download='arb_schedule_export.csv'; a.click();
+  URL.revokeObjectURL(a.href);
+  document.getElementById('msg').textContent='Schedule CSV exported.';
+}
+
+const csvMapperFields = [
+  {key:'tree_id', label:'Tree ID', required:true},
+  {key:'species', label:'Species'},
+  {key:'est_height', label:'Estimated height'},
+  {key:'stem_diameter', label:'DBH'},
+  {key:'n', label:'Canopy N'},
+  {key:'s', label:'Canopy S'},
+  {key:'e', label:'Canopy E'},
+  {key:'w', label:'Canopy W'},
+  {key:'first_sig_branch', label:'First significant branch'},
+  {key:'canopy_clearance', label:'Canopy clearance'},
+  {key:'phys_condition', label:'Physiological condition'},
+  {key:'num_group', label:'Number trees in group'},
+  {key:'tree_spacing', label:'Tree spacing'},
+  {key:'age', label:'Age'},
+  {key:'struct_condition', label:'Structural condition'},
+  {key:'condition_comments', label:'Condition comments'},
+  {key:'prelim_comments', label:'Preliminary management comments'},
+  {key:'development_impact', label:'Development impact'},
+  {key:'remaining_years', label:'Estimated remaining contribution'},
+  {key:'category', label:'Category'},
+  {key:'x', label:'X / Easting / Longitude'},
+  {key:'y', label:'Y / Northing / Latitude'}
+];
+function guessFeatureTypeFromName(name){
+  const s = String(name||'').toLowerCase();
+  if(s.includes('hedge')) return 'H';
+  if(s.includes('wood')) return 'W';
+  if(s.includes('group')) return 'G';
+  return 'T';
+}
+function suggestCsvMapping(headers){
+  const norm = h => String(h||'').trim().toLowerCase();
+  const hs = headers.map(h => ({raw:h, n:norm(h)}));
+  const findOne = (tests) => {
+    for(const h of hs){
+      if(tests.some(fn => fn(h.n))) return h.raw;
+    }
+    return '';
+  };
+  return {
+    tree_id: findOne([n=>n==='tree id', n=>n==='tree_id', n=>n==='tree no', n=>n==='tree number', n=>n==='tag', n=>n==='id', n=>n==='ref']),
+    species: findOne([n=>n==='species', n=>n==='species name']),
+    est_height: findOne([n=>n==='est height', n=>n==='height', n=>n==='height (m)', n=>n==='estimated height']),
+    stem_diameter: findOne([n=>n==='dbh', n=>n==='dbh (mm)', n=>n==='stem diameter', n=>n==='stem diameter (mm)', n=>n==='diameter']),
+    n: findOne([n=>n==='canopy n', n=>n==='north', n=>n==='crown n', n=>n==='n']),
+    s: findOne([n=>n==='canopy s', n=>n==='south', n=>n==='crown s', n=>n==='s']),
+    e: findOne([n=>n==='canopy e', n=>n==='east', n=>n==='crown e', n=>n==='e']),
+    w: findOne([n=>n==='canopy w', n=>n==='west', n=>n==='crown w', n=>n==='w']),
+    first_sig_branch: findOne([n=>n==='first significant branch', n=>n==='first branch', n=>n==='fsb']),
+    canopy_clearance: findOne([n=>n==='canopy clearance', n=>n==='crown clearance', n=>n==='clearance']),
+    phys_condition: findOne([n=>n==='physiological condition', n=>n==='phys condition']),
+    num_group: findOne([n=>n==='number trees in group', n=>n==='group size', n=>n==='num group']),
+    tree_spacing: findOne([n=>n==='tree spacing', n=>n==='spacing']),
+    age: findOne([n=>n==='age', n=>n==='age class']),
+    struct_condition: findOne([n=>n==='structural condition', n=>n==='struct condition']),
+    condition_comments: findOne([n=>n==='condition comments', n=>n==='condition comment', n=>n==='comments']),
+    prelim_comments: findOne([n=>n==='preliminary management comments', n=>n==='prelim comments', n=>n==='management comments']),
+    development_impact: findOne([n=>n==='development impact']),
+    remaining_years: findOne([n=>n==='estimated remaining contribution in years', n=>n==='remaining years', n=>n==='remaining contribution']),
+    category: findOne([n=>n==='category', n=>n==='bs5837 category']),
+    x: findOne([n=>n==='x', n=>n==='easting', n=>n==='eastings', n=>n==='lon', n=>n==='longitude']),
+    y: findOne([n=>n==='y', n=>n==='northing', n=>n==='northings', n=>n==='lat', n=>n==='latitude'])
+  };
+}
+function openCsvMapper(records, sourceName, appendMode){
+  const headers = records.length ? Object.keys(records[0]) : [];
+  const mapping = suggestCsvMapping(headers);
+  state.csvMapper = {
+    records,
+    sourceName,
+    headers,
+    mapping,
+    appendMode
+  };
+  document.getElementById('csvSourceName').value = sourceName || '';
+  document.getElementById('csvFeatureType').value = guessFeatureTypeFromName(sourceName);
+  document.getElementById('csvCoordType').value = 'bng';
+  document.getElementById('csvSwapXY').value = 'no';
+  document.getElementById('csvImportMode').value = appendMode ? 'Add to existing schedule' : 'Replace current schedule';
+  const box = document.getElementById('csvMappingFields');
+  box.innerHTML = csvMapperFields.map(f => {
+    const opts = ['<option value="">— not mapped —</option>'].concat(headers.map(h => `<option value="${escapeHtml(h)}" ${mapping[f.key]===h?'selected':''}>${escapeHtml(h)}</option>`));
+    return `<div class="field"><label>${escapeHtml(f.label)}${f.required?' *':''}</label><select data-map-key="${f.key}">${opts.join('')}</select></div>`;
+  }).join('');
+  document.getElementById('csvPreviewHead').innerHTML = '';
+  document.getElementById('csvPreviewBody').innerHTML = '';
+  document.getElementById('csvPreviewSummary').textContent = 'No preview yet.';
+  document.getElementById('csvMapperModal').classList.add('active');
+}
+function closeCsvMapper(){
+  document.getElementById('csvMapperModal').classList.remove('active');
+  state.csvMapper = null;
+  clearCsvPreviewLayer();
+  if(state.csvQueue && state.csvQueue.length){
+    const next = state.csvQueue.shift();
+    parseCsvFileForMapper(next.file, next.appendMode);
+  }
+}
+function clearCsvPreviewLayer(){
+  if(state.csvPreviewLayer && state.map){
+    try{ state.map.removeLayer(state.csvPreviewLayer); }catch(e){}
+  }
+  state.csvPreviewLayer = null;
+}
+function getCsvMapperSelection(){
+  const mapping = {};
+  document.querySelectorAll('[data-map-key]').forEach(el => mapping[el.dataset.mapKey] = el.value || '');
+  return {
+    mapping,
+    featureType: document.getElementById('csvFeatureType').value,
+    coordType: document.getElementById('csvCoordType').value,
+    swapXY: document.getElementById('csvSwapXY').value === 'yes'
+  };
+}
+function normaliseImportedCategory(v, featureType){
+  const s = String(v||'').trim();
+  if(!s) return featureType==='T' ? 'C1' : 'C2';
+  return s;
+}
+function rowFromMappedCsv(sourceRow, selection){
+  const m = selection.mapping;
+  const get = k => m[k] ? (sourceRow[m[k]] ?? '') : '';
+  let x = get('x'), y = get('y');
+  if(selection.swapXY){ const t=x; x=y; y=t; }
+  let outX = '', outY = '', mapLatLon = null;
+  if(selection.coordType === 'bng'){
+    outX = x; outY = y;
+    const xx = num(x), yy = num(y);
+    if(xx !== null && yy !== null){
+      const ll = toLatLng(xx, yy);
+      if(ll) mapLatLon = ll;
+    }
+  } else if(selection.coordType === 'latlon'){
+    const lat = num(y), lon = num(x);
+    if(lat !== null && lon !== null){
+      try{
+        const bng = proj4('EPSG:4326','EPSG:27700',[lon,lat]);
+        outX = Math.round(bng[0]).toString();
+        outY = Math.round(bng[1]).toString();
+        mapLatLon = [lat, lon];
+      }catch(e){}
+    }
+  }
+  const featureType = selection.featureType || 'T';
+  return recomputeRow({
+    uid:'',
+    tree_id: get('tree_id') || '',
+    x: outX,
+    y: outY,
+    species: get('species') || '',
+    est_height: get('est_height') || '',
+    stem_diameter: get('stem_diameter') || '',
+    combined_stem_diameter:'',
+    n: get('n') || '',
+    s: get('s') || '',
+    e: get('e') || '',
+    w: get('w') || '',
+    first_sig_branch: get('first_sig_branch') || '',
+    canopy_clearance: get('canopy_clearance') || '',
+    phys_condition: get('phys_condition') || '',
+    num_group: get('num_group') || '',
+    tree_spacing: get('tree_spacing') || '',
+    age: get('age') || '',
+    struct_condition: get('struct_condition') || '',
+    condition_comments: get('condition_comments') || '',
+    prelim_comments: get('prelim_comments') || '',
+    development_impact: get('development_impact') || '',
+    remaining_years: get('remaining_years') || '',
+    category: normaliseImportedCategory(get('category'), featureType),
+    rpa_radius:'',
+    _feature_type: featureType,
+    _geometry: mapLatLon ? {type:'Point', coordinates:[mapLatLon[1], mapLatLon[0]], properties:{feature_type:featureType}} : null
+  });
+}
+function previewCsvImport(){
+  if(!state.csvMapper) return;
+  const selection = getCsvMapperSelection();
+  const rows = state.csvMapper.records.slice(0, 8).map(r => rowFromMappedCsv(r, selection));
+  const hits = rows.filter(r => r.x && r.y).length;
+  const total = state.csvMapper.records.length;
+  const headCols = ['Tree ID','Species','Category','X','Y'];
+  document.getElementById('csvPreviewHead').innerHTML = '<tr>' + headCols.map(h => `<th>${h}</th>`).join('') + '</tr>';
+  document.getElementById('csvPreviewBody').innerHTML = rows.map(r => `<tr><td>${escapeHtml(r.tree_id||'')}</td><td>${escapeHtml(r.species||'')}</td><td>${escapeHtml(r.category||'')}</td><td>${escapeHtml(r.x||'')}</td><td>${escapeHtml(r.y||'')}</td></tr>`).join('');
+  document.getElementById('csvPreviewSummary').textContent = `${total} row(s) found. ${hits} row(s) have usable coordinates after mapping. Feature type: ${selection.featureType}. CRS: ${selection.coordType === 'bng' ? 'BNG' : (selection.coordType === 'latlon' ? 'Latitude / Longitude' : 'No coordinates')}.`;
+  clearCsvPreviewLayer();
+  const previewPoints = rows.filter(r => r._geometry && r._geometry.coordinates).map(r => {
+    const c = r._geometry.coordinates; return L.circleMarker([c[1], c[0]], {radius:5, color:'#c1121f', weight:1, fillColor:'#f97066', fillOpacity:0.9});
+  });
+  if(previewPoints.length && state.map){
+    state.csvPreviewLayer = L.featureGroup(previewPoints).addTo(state.map);
+    try{ state.map.fitBounds(state.csvPreviewLayer.getBounds().pad(0.2)); }catch(e){}
+  }
+}
+function commitCsvImport(){
+  if(!state.csvMapper) return;
+  const selection = getCsvMapperSelection();
+  const imported = state.csvMapper.records.map(r => rowFromMappedCsv(r, selection));
+  if(!state.csvMapper.appendMode){
+    state.rows = [];
+  }
+  state.rows = state.rows.concat(imported);
+  state.savedRows = JSON.parse(JSON.stringify(state.rows));
+  state.hasUnsavedChanges = false;
+  updateUnsavedBadge();
+  renderSchedule();
+  runQa(false);
+  renderStats();
+  renderCharts();
+  renderSummary();
+  renderMap();
+  clearCsvPreviewLayer();
+  document.getElementById('msg').textContent = `${imported.length} row(s) imported from ${state.csvMapper.sourceName}.`;
+  closeCsvMapper();
+}
+function parseCsvFileForMapper(file, appendMode){
+  if(!file) return;
+  Papa.parse(file, {
+    header:true,
+    skipEmptyLines:true,
+    complete: res => {
+      openCsvMapper(res.data || [], file.name, appendMode);
+    },
+    error: () => {
+      document.getElementById('msg').textContent = `Could not read ${file.name}.`;
+    }
+  });
+}
+function deleteSchedule(){
+  state.rows = [];
+  state.savedRows = [];
+  state.selectedIndex = null;
+  state.hasUnsavedChanges = false;
+  updateUnsavedBadge();
+  renderSchedule();
+  runQa(false);
+  renderStats();
+  renderCharts();
+  renderSummary();
+  renderMap();
+  updateSelectedSummary();
+  document.getElementById('msg').textContent = 'Schedule cleared.';
+}
+
+function importCsv(text){
+  Papa.parse(text,{
+    header:true,
+    skipEmptyLines:true,
+    complete: res => openCsvMapper(res.data || [], 'Imported CSV', false)
+  });
+}
+
+
+
+function updateProjectMetaUi(){
+  const pm = state.projectMeta || {};
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val ?? ''; };
+  set('projectNameInput', pm.project_name || '');
+  set('projectIdInput', pm.project_id || '');
+  set('siteAddressInput', pm.site_address || '');
+  set('siteLatInput', pm.site_centre && pm.site_centre.lat != null ? String(pm.site_centre.lat) : '');
+  set('siteLonInput', pm.site_centre && pm.site_centre.lon != null ? String(pm.site_centre.lon) : '');
+}
+function syncProjectMetaFromUi(){
+  const get = id => document.getElementById(id)?.value || '';
+  state.projectMeta = {
+    project_name: get('projectNameInput'),
+    project_id: get('projectIdInput'),
+    site_address: get('siteAddressInput'),
+    site_centre: {
+      lat: get('siteLatInput') ? Number(get('siteLatInput')) : null,
+      lon: get('siteLonInput') ? Number(get('siteLonInput')) : null
+    }
+  };
+}
+function clearRedLine(){
+  state.redLineData = null;
+  if(state.redLineLayer && state.map){
+    state.map.removeLayer(state.redLineLayer);
+    state.redLineLayer = null;
+  }
+  const status = document.getElementById('redLineStatus');
+  if(status) status.textContent = 'No red line boundary loaded yet.';
+}
+function renderRedLine(){
+  if(state.redLineLayer && state.map){
+    state.map.removeLayer(state.redLineLayer);
+    state.redLineLayer = null;
+  }
+  if(state.redLineSetupLayer && state.setupMap){
+    state.setupMap.removeLayer(state.redLineSetupLayer);
+    state.redLineSetupLayer = null;
+  }
+  if(!state.redLineData) return;
+  if(state.map){
+    state.redLineLayer = L.geoJSON(state.redLineData, {style: function(){ return {color:'#c1121f', weight:3, fillOpacity:0.03}; }}).addTo(state.map);
+  }
+  if(state.setupMap){
+    state.redLineSetupLayer = L.geoJSON(state.redLineData, {style: function(){ return {color:'#c1121f', weight:3, fillOpacity:0.03}; }}).addTo(state.setupMap);
+  }
+  try{
+    const activeLayer = state.redLineSetupLayer || state.redLineLayer;
+    const bounds = activeLayer.getBounds();
+    if(bounds.isValid()){
+      if(state.map) state.map.fitBounds(bounds.pad(0.12));
+      if(state.setupMap) state.setupMap.fitBounds(bounds.pad(0.12));
+      const c = bounds.getCenter();
+      const latEl = document.getElementById('siteLatInput');
+      const lonEl = document.getElementById('siteLonInput');
+      if(latEl) latEl.value = c.lat.toFixed(6);
+      if(lonEl) lonEl.value = c.lng.toFixed(6);
+      syncProjectMetaFromUi();
+    }
+  }catch(err){}
+  const status = document.getElementById('redLineStatus');
+  if(status) status.textContent = 'Red line boundary loaded.';
+}
+function loadRedLineGeoJsonObject(obj){
+  state.redLineData = obj;
+  renderRedLine();
+  document.getElementById('msg').textContent = 'Red line boundary loaded.';
+}
+function stopRedLineDraw(message){
+  state.drawingRedLine = false;
+  if(state.activeRedLineDrawer){
+    try{ state.activeRedLineDrawer.disable(); }catch(err){}
+    state.activeRedLineDrawer = null;
+  }
+  if(state.setupMap){
+    try{ state.setupMap.doubleClickZoom.enable(); }catch(err){}
+    const c = state.setupMap.getContainer();
+    if(c) c.style.cursor = '';
+  }
+  if(message) document.getElementById('msg').textContent = message;
+}
+function beginRedLineDraw(){
+  if(!state.setupMap) return;
+  stopRedLineDraw();
+  state.drawingRedLine = true;
+  document.getElementById('msg').textContent = 'Click to draw the red line boundary. Double-click to finish, or press Stop drawing.';
+  if(state.setupMap){
+    try{ state.setupMap.doubleClickZoom.disable(); }catch(err){}
+    const c = state.setupMap.getContainer();
+    if(c) c.style.cursor = 'crosshair';
+  }
+  const drawer = new L.Draw.Polygon(state.setupMap, {
+    allowIntersection:false,
+    showArea:true,
+    repeatMode:false,
+    shapeOptions:{color:'#c1121f', weight:3}
+  });
+  state.activeRedLineDrawer = drawer;
+  drawer.enable();
+}
+function buildProjectJson(){
+  syncProjectMetaFromUi();
+  return {
+    package_version:'1.0',
+    dashboard_version:'v33',
+    project: state.projectMeta,
+    coordinate_reference_system:{epsg:'EPSG:4326'},
+    survey_mode:{mode:state.mode, allow_development_impact: state.mode === 'aia'},
+    feature_types:{
+      T:{label:'Tree', geometry_type:'Point'},
+      G:{label:'Group', geometry_type:'Polygon'},
+      H:{label:'Hedge', geometry_type:'Polygon'},
+      W:{label:'Woodland', geometry_type:'Polygon'}
+    },
+    lookups:{
+      age:['Young','Semi-mature','Early Mature','Mature','Veteran','Ancient'],
+      category:['A1','A2','A3','B1','B2','B3','C1','C2','C3','U'],
+      physiological_condition:['Good','Fair','Poor','Dead'],
+      structural_condition:['Good','Fair','Poor','Dead']
+    },
+    schema:{
+      feature_id_field:'uid',
+      display_id_field:'tree_id',
+      fields:[
+        {name:'uid',label:'Unique ID',type:'text',required:true,editable:false},
+        {name:'feature_type',label:'Feature Type',type:'select',required:true,editable:false,options_source:'feature_types'},
+        {name:'tree_id',label:'Tree ID',type:'text',required:true,editable:true},
+        {name:'species',label:'Species',type:'select_or_text',required:true,editable:true},
+        {name:'age',label:'Age',type:'select',required:true,editable:true,options_source:'age'},
+        {name:'stem_diameter',label:'DBH (mm)',type:'text',required:true,editable:true},
+        {name:'est_height',label:'Estimated Height (m)',type:'number',required:false,editable:true},
+        {name:'canopy_n',label:'Canopy N (m)',type:'number',required:false,editable:true},
+        {name:'canopy_e',label:'Canopy E (m)',type:'number',required:false,editable:true},
+        {name:'canopy_s',label:'Canopy S (m)',type:'number',required:false,editable:true},
+        {name:'canopy_w',label:'Canopy W (m)',type:'number',required:false,editable:true},
+        {name:'first_branch_n',label:'First Branch N (m)',type:'number',required:false,editable:true},
+        {name:'first_branch_e',label:'First Branch E (m)',type:'number',required:false,editable:true},
+        {name:'first_branch_s',label:'First Branch S (m)',type:'number',required:false,editable:true},
+        {name:'first_branch_w',label:'First Branch W (m)',type:'number',required:false,editable:true},
+        {name:'crown_clearance',label:'Crown Clearance (m)',type:'number',required:false,editable:true},
+        {name:'physiological_condition',label:'Physiological Condition',type:'select',required:true,editable:true,options_source:'physiological_condition'},
+        {name:'structural_condition',label:'Structural Condition',type:'select',required:true,editable:true,options_source:'structural_condition'},
+        {name:'category',label:'Category',type:'select',required:true,editable:true,options_source:'category'},
+        {name:'notes',label:'Notes',type:'textarea',required:false,editable:true},
+        {name:'preliminary_management',label:'Preliminary Management',type:'textarea',required:false,editable:true},
+        {name:'development_impact',label:'Development Impact',type:'textarea',required:false,editable:true},
+        {name:'remaining_years',label:'Remaining Contribution',type:'text',required:false,editable:true},
+        {name:'combined_stem_diameter',label:'Combined Stem Diameter (mm)',type:'number',required:false,editable:false,calculated:true},
+        {name:'rpa_radius',label:'RPA Radius (m)',type:'number',required:false,editable:false,calculated:true}
+      ]
+    }
+  };
+}
+function exportProjectPackage(){
+  const pj = buildProjectJson();
+  const site = state.redLineData || {type:'FeatureCollection', features:[]};
+
+  const exportSurveyFeatures = (!state.usingDemoRows) && state.rows.some(function(r){
+    const x = num(r.x), y = num(r.y);
+    return !!(r.tree_id || r.species || x !== null || y !== null || r._geometry);
+  });
+
+  const survey = {
+    type:'FeatureCollection',
+    project_id: pj.project.project_id || '',
+    crs_name:'EPSG:4326',
+    features: exportSurveyFeatures ? state.rows.map(function(r){
+      const t = featureType(r.tree_id);
+      const x = num(r.x), y = num(r.y);
+      let geometry = null;
+      if(['G','H','W'].includes(t) && r._geometry){
+        geometry = r._geometry;
+      } else if(x !== null && y !== null){
+        const ll = toLatLng(x,y);
+        if(ll) geometry = {type:'Point', coordinates:[ll[1], ll[0]]};
+      }
+      if(!geometry){
+        geometry = t === 'T' ? {type:'Point', coordinates:[0,0]} : {type:'Polygon', coordinates:[[]]};
+      }
+      const uidVal = r.uid || ('uid-' + Math.random().toString(36).slice(2,10));
+      return {
+        type:'Feature',
+        id: uidVal,
+        geometry: geometry,
+        properties:{
+          uid: uidVal,
+          feature_type: t,
+          tree_id: r.tree_id || '',
+          species: r.species || '',
+          age: r.age || '',
+          stem_diameter: r.stem_diameter || '',
+          est_height: r.est_height || '',
+          canopy_n: r.n || '',
+          canopy_e: r.e || '',
+          canopy_s: r.s || '',
+          canopy_w: r.w || '',
+          first_branch_n: r.first_branch_n || '',
+          first_branch_e: r.first_branch_e || '',
+          first_branch_s: r.first_branch_s || '',
+          first_branch_w: r.first_branch_w || '',
+          crown_clearance: r.canopy_clearance || '',
+          physiological_condition: r.phys_condition || '',
+          structural_condition: r.struct_condition || '',
+          category: r.category || '',
+          notes: r.notes || r.condition_comments || '',
+          preliminary_management: r.prelim_comments || '',
+          development_impact: r.development_impact || '',
+          remaining_years: r.remaining_years || '',
+          combined_stem_diameter: r.combined_stem_diameter || '',
+          rpa_radius: r.rpa_radius || ''
+        }
+      };
+    }) : []
+  };
+
+  const payload = {
+    project_json: pj,
+    site_geojson: site,
+    survey_geojson: survey
+  };
+
+  if(state.topoData){
+    payload.topo_geojson = state.topoData;
+  }
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const name = (pj.project.project_name || 'tilia_project').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  a.download = (name || 'tilia_project') + '_project_package.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  const topoMsg = state.topoData ? ' Topo included.' : ' No topo included.';
+  const surveyMsg = exportSurveyFeatures ? ` Survey features included: ${survey.features.length}.` : ' Survey features omitted.';
+  document.getElementById('msg').textContent = 'Project package exported.' + topoMsg + surveyMsg;
+}
+
+function buildDeskStudyOutput(){
+  const v = id => (document.getElementById(id)?.value || "").trim();
+  const lines = [];
+  if(v('dsSiteName')) lines.push(`Site: ${v('dsSiteName')}`);
+  if(v('dsAddress')) lines.push(`Address / postcode: ${v('dsAddress')}`);
+  if(v('dsLpa')) lines.push(`LPA / authority: ${v('dsLpa')}`);
+  if(v('dsTpo')) lines.push(`TPO: ${v('dsTpo')}`);
+  if(v('dsCa')) lines.push(`Conservation Area: ${v('dsCa')}`);
+  if(v('dsAw')) lines.push(`Ancient woodland / PAWS: ${v('dsAw')}`);
+  if(v('dsSssi')) lines.push(`SSSI: ${v('dsSssi')}`);
+  if(v('dsSoils')) lines.push(`Soils / geology: ${v('dsSoils')}`);
+  if(v('dsLinks')) lines.push(`Validation links / notes: ${v('dsLinks')}`);
+  const pa = (document.getElementById('planningAuthorityResult')?.textContent || '').trim();
+  if(pa && pa !== 'No authority result yet.') lines.push(`Planning authority check: ${pa}`);
+  document.getElementById('deskStudyOutput').value = lines.map(x => `• ${x}`).join('\n');
+}
+
+const MAGIC_PRESET_BASE = 'https://magic.defra.gov.uk/MagicMap.html?chosenLayers=siteunitPIndex,siteunitIndex,sssiPIndex,sssiIndex,ancwoodIndex,ancwoodrevIndex,bapdecIndex,orchardIndex,bapwoodIndex&box=67981:-431538:705820:802253';
+
+function updateSiteLocationStatus(){
+  const ids = ['siteLocationStatus','siteLocationStatusSetup'];
+  ids.forEach(function(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(state.siteCenter){
+      const lat = state.siteCenter[0], lon = state.siteCenter[1];
+      el.textContent = `Site location set: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+    } else {
+      el.textContent = 'No site location set yet.';
+    }
+  });
+}
+
+function setSiteBoxFromLatLon(lat, lon, halfSizeMeters){
+  halfSizeMeters = halfSizeMeters || 500;
+  try{
+    const out = proj4('EPSG:4326', 'EPSG:27700', [lon, lat]);
+    const x = out[0], y = out[1];
+    state.siteCenter = [lat, lon];
+    state.siteBoxBng = {
+      minx: Math.round(x - halfSizeMeters),
+      miny: Math.round(y - halfSizeMeters),
+      maxx: Math.round(x + halfSizeMeters),
+      maxy: Math.round(y + halfSizeMeters)
+    };
+    updateSiteLocationStatus();
+    if(state.map) state.map.setView([lat, lon], 16);
+  }catch(err){
+    document.getElementById('msg').textContent = 'Could not set site extent from the chosen location.';
+  }
+}
+
+function magicUrlForCurrentSite(){
+  if(!state.siteBoxBng) return MAGIC_PRESET_BASE;
+  const b = state.siteBoxBng;
+  const newBox = `${b.minx}:${b.miny}:${b.maxx}:${b.maxy}`;
+  if(MAGIC_PRESET_BASE.includes('&box=')){
+    return MAGIC_PRESET_BASE.replace(/&box=[^&]*/,'&box=' + newBox);
+  }
+  if(MAGIC_PRESET_BASE.includes('?box=')){
+    return MAGIC_PRESET_BASE.replace(/\?box=[^&]*/,'?box=' + newBox);
+  }
+  return MAGIC_PRESET_BASE + '&box=' + newBox;
+}
+
+async function geocodeAddressToSite(){
+  const q = (document.getElementById('siteAddressInput')?.value || '').trim();
+  if(!q){
+    document.getElementById('msg').textContent = 'Enter an address or postcode first.';
+    return;
+  }
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(q);
+  try{
+    const res = await fetch(url, {headers: {'Accept':'application/json'}});
+    const data = await res.json();
+    if(!data || !data.length){
+      document.getElementById('msg').textContent = 'No location found. Use Open map search, then Use setup map centre.';
+      return;
+    }
+    const lat = Number(data[0].lat), lon = Number(data[0].lon);
+    setSiteBoxFromLatLon(lat, lon, 500);
+    document.getElementById('msg').textContent = 'Site location set from address.';
+  }catch(err){
+    document.getElementById('msg').textContent = 'Postcode lookup is blocked here. Use Open map search, then Use setup map centre.';
+  }
+}
+
+
+
+function clearTopo(){
+  state.topoData = null;
+  if(state.topoLayer && state.map){
+    state.map.removeLayer(state.topoLayer);
+    state.topoLayer = null;
+  }
+  if(state.topoSetupLayer && state.setupMap){
+    state.setupMap.removeLayer(state.topoSetupLayer);
+    state.topoSetupLayer = null;
+  }
+  const el = document.getElementById('topoStatus');
+  if(el) el.textContent = 'No topo/reference overlay loaded yet.';
+}
+function renderTopo(){
+  if(state.topoLayer && state.map){
+    state.map.removeLayer(state.topoLayer);
+    state.topoLayer = null;
+  }
+  if(state.topoSetupLayer && state.setupMap){
+    state.setupMap.removeLayer(state.topoSetupLayer);
+    state.topoSetupLayer = null;
+  }
+  if(!state.topoData) return;
+  const styleFn = function(){ return {color:'#667085', weight:2, fillColor:'#d0d5dd', fillOpacity:0.06}; };
+  if(state.map){
+    state.topoLayer = L.geoJSON(state.topoData, {style: styleFn}).addTo(state.map);
+  }
+  if(state.setupMap){
+    state.topoSetupLayer = L.geoJSON(state.topoData, {style: styleFn}).addTo(state.setupMap);
+  }
+  const el = document.getElementById('topoStatus');
+  if(el) el.textContent = 'Topo/reference overlay loaded.';
+}
+
+function clearAuthorityLayer(){
+  if(state.authorityLayer && state.map){
+    state.map.removeLayer(state.authorityLayer);
+    state.authorityLayer = null;
+  }
+}
+function renderAuthorityLayers(){
+  clearAuthorityLayer();
+  if(!state.map) return;
+  const groups = [];
+  if(state.lpaData){
+    groups.push(L.geoJSON(state.lpaData, {
+      style: () => ({color:'#7c3aed', weight:2, fillColor:'#c4b5fd', fillOpacity:0.06})
+    }));
+  }
+  if(state.npaData){
+    groups.push(L.geoJSON(state.npaData, {
+      style: () => ({color:'#0f766e', weight:2, fillColor:'#99f6e4', fillOpacity:0.08, dashArray:'4 4'})
+    }));
+  }
+  if(state.siteBoundaryData){
+    groups.push(L.geoJSON(state.siteBoundaryData, {
+      style: () => ({color:'#c1121f', weight:3, fillOpacity:0})
+    }));
+  }
+  if(groups.length){
+    state.authorityLayer = L.featureGroup(groups).addTo(state.map);
+  }
+}
+function readGeoJsonFile(file, assignKey, label){
+  if(!file) return;
+  file.text().then(txt => {
+    try{
+      state[assignKey] = JSON.parse(txt);
+      renderAuthorityLayers();
+      document.getElementById('authorityStatus').textContent = label + ' loaded.';
+      document.getElementById('msg').textContent = label + ' loaded.';
+    }catch(err){
+      document.getElementById('msg').textContent = 'Could not read ' + label + '.';
+    }
+  });
+}
+function getFeatureName(feature){
+  const p = feature.properties || {};
+  return p.LPA23NM || p.LPA_NAME || p.NAME || p.name || p.NATPARK || p.NPARK_NAME || p.NPName || p.park_name || 'Unnamed authority';
+}
+function featureCollectionToFeatures(data){
+  if(!data) return [];
+  if(data.type === 'FeatureCollection') return data.features || [];
+  if(data.type === 'Feature') return [data];
+  return [];
+}
+function identifyPlanningAuthorities(){
+  const siteFeatures = featureCollectionToFeatures(state.siteBoundaryData);
+  if(!siteFeatures.length){
+    document.getElementById('planningAuthorityResult').textContent = 'Load a site boundary GeoJSON first.';
+    document.getElementById('msg').textContent = 'Load a site boundary GeoJSON first.';
+    return;
+  }
+  const siteUnion = siteFeatures.length === 1 ? siteFeatures[0] : turf.union(...siteFeatures);
+  const lpaHits = [];
+  const npaHits = [];
+
+  featureCollectionToFeatures(state.lpaData).forEach(f => {
+    try{
+      if(turf.booleanIntersects(siteUnion, f)) lpaHits.push(getFeatureName(f));
+    }catch(err){}
+  });
+  featureCollectionToFeatures(state.npaData).forEach(f => {
+    try{
+      if(turf.booleanIntersects(siteUnion, f)) npaHits.push(getFeatureName(f));
+    }catch(err){}
+  });
+
+  const unique = arr => [...new Set(arr.filter(Boolean))];
+  const lpas = unique(lpaHits);
+  const npas = unique(npaHits);
+
+  let lines = [];
+  if(npas.length){
+    lines.push('Primary planning authority likely to be: ' + npas.join('; '));
+  }
+  if(lpas.length){
+    lines.push('Other intersecting local planning authorities: ' + lpas.join('; '));
+  }
+  if(!npas.length && !lpas.length){
+    lines.push('No intersecting planning authority found from the loaded layers.');
+  }
+  const result = lines.join(' ');
+  document.getElementById('planningAuthorityResult').textContent = result;
+
+  const lpaField = document.getElementById('dsLpa');
+  if(lpaField){
+    if(npas.length && lpas.length) lpaField.value = npas.join('; ') + ' (primary), ' + lpas.join('; ');
+    else if(npas.length) lpaField.value = npas.join('; ');
+    else if(lpas.length) lpaField.value = lpas.join('; ');
+  }
+  document.getElementById('msg').textContent = 'Planning authority check complete.';
+}
+
+function openDeskStudyUrl(kind){
+  const q = (document.getElementById('dsAddress')?.value || document.getElementById('dsSiteName')?.value || '').trim();
+  let url = '';
+  if(kind === 'magic'){
+    url = magicUrlForCurrentSite();
+  } else if(kind === 'aw'){
+    url = 'https://naturalengland-defra.opendata.arcgis.com/datasets/ancient-woodland-england/explore?location=52.900079%2C-2.004678%2C5';
+    if(state.siteCenter){
+      const lat = state.siteCenter[0], lon = state.siteCenter[1];
+      url = 'https://naturalengland-defra.opendata.arcgis.com/datasets/ancient-woodland-england/explore?location=' + encodeURIComponent(lat + ',' + lon + ',14');
+    }
+  } else if(kind === 'maps'){
+    if(state.siteCenter){
+      const lat = state.siteCenter[0], lon = state.siteCenter[1];
+      url = 'https://www.google.com/maps/@' + lat + ',' + lon + ',18z';
+    } else {
+      url = 'https://www.google.com/maps/search/' + encodeURIComponent(q);
+    }
+  }
+  if(url) window.open(url, '_blank');
+}
+
+
+
+function clearConstraintLayer(){
+  if(state.constraintLayer && state.map){
+    state.map.removeLayer(state.constraintLayer);
+    state.constraintLayer = null;
+  }
+}
+function renderConstraintLayer(){
+  clearConstraintLayer();
+  if(!state.map || !state.constraintData) return;
+  try{
+    state.constraintLayer = L.geoJSON(state.constraintData, {
+      style: function(){
+        return {color:'#315f8a', weight:2, dashArray:'5 5', fillColor:'#9ec5e6', fillOpacity:0.12};
+      },
+      pointToLayer: function(feature, latlng){
+        return L.circleMarker(latlng, {radius:5, color:'#315f8a', weight:1, fillColor:'#9ec5e6', fillOpacity:0.9});
+      }
+    }).addTo(state.map);
+    document.getElementById('msg').textContent = 'Constraint layer loaded and overlaid on the map.';
+  }catch(err){
+    document.getElementById('msg').textContent = 'Could not render the imported constraint layer.';
+  }
+}
+
+function updateTabChrome(tabId){
+  const stats = document.getElementById('statsBar');
+  const banner = document.getElementById('msg');
+  const setupMode = tabId === 'setupTab';
+  if(stats) stats.style.display = setupMode ? 'none' : 'grid';
+  if(banner) banner.style.display = setupMode ? 'none' : 'block';
+}
+document.querySelectorAll(".tabbtn").forEach(btn => btn.addEventListener("click", () => {
+  document.querySelectorAll(".tabbtn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  if(btn.dataset.tab !== "setupTab"){ stopRedLineDraw(); }
+  btn.classList.add("active");
+  document.getElementById(btn.dataset.tab).classList.add("active");
+  if(btn.dataset.tab==="mapTab" && state.map) setTimeout(()=>state.map.invalidateSize(),80);
+  if(btn.dataset.tab==="setupTab" && state.setupMap) setTimeout(()=>state.setupMap.invalidateSize(),80);
+}));
+
+document.getElementById("exportProjectPackageTopBtn").addEventListener("click", function(){ stopRedLineDraw(); exportProjectPackage(); });
+document.getElementById("exportProjectPackageSetupBtn").addEventListener("click", function(){ stopRedLineDraw(); exportProjectPackage(); });
+document.getElementById("drawRedLineBtn").addEventListener("click", beginRedLineDraw);
+document.getElementById("stopRedLineBtn").addEventListener("click", function(){ stopRedLineDraw("Red line drawing stopped."); });
+document.getElementById("fitRedLineBtn").addEventListener("click", function(){ stopRedLineDraw();
+  const layer = state.redLineSetupLayer || state.redLineLayer || state.topoSetupLayer || state.topoLayer;
+  if(layer){
+    const b = layer.getBounds();
+    if(b.isValid()){
+      if(state.setupMap) state.setupMap.fitBounds(b.pad(0.12));
+      if(state.map) state.map.fitBounds(b.pad(0.12));
+    }
+  }
+});
+document.getElementById("setSiteFromAddressSetupBtn").addEventListener("click", geocodeAddressToSite);
+document.getElementById("useSetupMapCentreBtn").addEventListener("click", function(){
+  if(!state.setupMap) return;
+  const c = state.setupMap.getCenter();
+  setSiteBoxFromLatLon(c.lat, c.lng, 500);
+  document.getElementById('msg').textContent = 'Site location set from setup map centre.';
+});
+document.getElementById("copySiteCentreBtn").addEventListener("click", function(){
+  const lat = document.getElementById('siteLatInput')?.value || '';
+  const lon = document.getElementById('siteLonInput')?.value || '';
+  const txt = lat && lon ? (lat + ', ' + lon) : '';
+  if(!txt) return;
+  navigator.clipboard.writeText(txt).then(function(){
+    document.getElementById('msg').textContent = 'Site centre copied.';
+  }).catch(function(){
+    document.getElementById('msg').textContent = 'Could not copy site centre automatically.';
+  });
+});
+document.getElementById("topoGeoJsonInput").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  file.text().then(function(txt){
+    try{
+      state.topoData = JSON.parse(txt);
+      renderTopo();
+      document.getElementById('msg').textContent = 'Topo/reference overlay loaded.';
+    }catch(err){
+      document.getElementById('msg').textContent = 'Could not read topo GeoJSON.';
+    }
+  });
+});
+document.getElementById("clearTopoBtn").addEventListener("click", function(){
+  clearTopo();
+  document.getElementById('msg').textContent = 'Topo/reference overlay cleared.';
+});
+document.getElementById("openGoogleMapsSetupBtn").addEventListener("click", function(){
+  const q = (document.getElementById("siteAddressInput")?.value || "").trim();
+  if(state.siteCenter){
+    openDeskStudyUrl("maps");
+  } else if(q){
+    window.open("https://www.google.com/maps/search/" + encodeURIComponent(q), "_blank");
+  } else {
+    openDeskStudyUrl("maps");
+  }
+});
+document.getElementById("openMagicSetupBtn").addEventListener("click", function(){ openDeskStudyUrl("magic"); });
+document.getElementById("setSiteFromAddressSetupBtn").addEventListener("click", geocodeAddressToSite);
+document.getElementById("useSetupMapCentreBtn").addEventListener("click", function(){
+  if(!state.setupMap) return;
+  const c = state.setupMap.getCenter();
+  setSiteBoxFromLatLon(c.lat, c.lng, 500);
+  document.getElementById('msg').textContent = 'Site location set from setup map centre.';
+});
+document.getElementById("copySiteCentreBtn").addEventListener("click", function(){
+  const lat = document.getElementById('siteLatInput')?.value || '';
+  const lon = document.getElementById('siteLonInput')?.value || '';
+  const txt = lat && lon ? (lat + ', ' + lon) : '';
+  if(!txt) return;
+  navigator.clipboard.writeText(txt).then(function(){
+    document.getElementById('msg').textContent = 'Site centre copied.';
+  }).catch(function(){
+    document.getElementById('msg').textContent = 'Could not copy site centre automatically.';
+  });
+});
+
+document.getElementById("clearRedLineBtn").addEventListener("click", function(){ clearRedLine(); document.getElementById("msg").textContent = "Red line boundary cleared."; });
+document.getElementById("redLineGeoJsonInput").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  file.text().then(function(txt){
+    try{ loadRedLineGeoJsonObject(JSON.parse(txt)); }
+    catch(err){ document.getElementById("msg").textContent = "Could not read red line GeoJSON."; }
+  });
+});
+document.getElementById("openAtiBtn").addEventListener("click", function(){
+  const q = (document.getElementById("dsAddress")?.value || document.getElementById("projectNameInput")?.value || "").trim();
+  const url = "https://www.google.com/search?q=" + encodeURIComponent("Woodland Trust Ancient Tree Inventory " + q);
+  window.open(url, "_blank");
+});
+["projectNameInput","projectIdInput","siteAddressInput","siteLatInput","siteLonInput"].forEach(function(id){
+  const el = document.getElementById(id);
+  if(el) el.addEventListener("input", syncProjectMetaFromUi);
+});
+document.getElementById("exportScheduleBtn").addEventListener("click", exportScheduleCsv);
+document.getElementById("modeSelect").addEventListener("change", e => { state.mode=e.target.value; renderSchedule(); renderStats(); });
+document.getElementById("toggleModeBtn").addEventListener("click", ()=>{ state.mode=state.mode==="baseline"?"aia":"baseline"; document.getElementById("modeSelect").value=state.mode; renderSchedule(); renderStats(); document.getElementById("toggleModeBtn").textContent=`Mode: ${state.mode==="aia" ? "AIA" : "Baseline"}`; });
+document.getElementById("addRowBtn").addEventListener("click", addBlankRow);
+document.getElementById("saveChangesBtn").addEventListener("click", saveChanges);
+document.getElementById("undoChangesBtn").addEventListener("click", undoUnsavedChanges);
+document.getElementById("runQaBtn").addEventListener("click", ()=>{ runQa(true); renderSummary(); });
+document.getElementById("csvFile").addEventListener("change", e => { const file=e.target.files[0]; if(file) parseCsvFileForMapper(file, false); e.target.value=""; });
+const csvFilesMulti = document.getElementById("csvFilesMulti"); if(csvFilesMulti) csvFilesMulti.addEventListener("change", e => { const files = Array.from(e.target.files||[]); files.forEach((file, idx) => { if(idx===0 && !state.csvMapper){ parseCsvFileForMapper(file, true); } else { state.csvQueue.push({file, appendMode:true}); } }); e.target.value=""; });
+document.getElementById("deleteScheduleBtn").addEventListener("click", deleteSchedule);
+const deleteScheduleBtn2 = document.getElementById("deleteScheduleBtn2"); if(deleteScheduleBtn2) deleteScheduleBtn2.addEventListener("click", deleteSchedule);
+document.getElementById("csvPreviewBtn").addEventListener("click", previewCsvImport);
+document.getElementById("csvImportCommitBtn").addEventListener("click", commitCsvImport);
+document.getElementById("csvMapperCancelBtn").addEventListener("click", closeCsvMapper);
+document.getElementById("copySummaryBtn").addEventListener("click", copySummaryText);
+const buildDeskStudyBtn = document.getElementById("buildDeskStudyBtn"); if(buildDeskStudyBtn) buildDeskStudyBtn.addEventListener("click", buildDeskStudyOutput);
+const openMagicBtn = document.getElementById("openMagicBtn"); if(openMagicBtn) openMagicBtn.addEventListener("click", ()=>openDeskStudyUrl("magic"));
+const openAwBtn = document.getElementById("openAwBtn"); if(openAwBtn) openAwBtn.addEventListener("click", ()=>openDeskStudyUrl("aw"));
+const openGoogleMapsBtn = document.getElementById("openGoogleMapsBtn"); if(openGoogleMapsBtn) openGoogleMapsBtn.addEventListener("click", ()=>openDeskStudyUrl("maps"));
+const siteBoundaryFile = document.getElementById('siteBoundaryFile');
+if(siteBoundaryFile) siteBoundaryFile.addEventListener('change', e => readGeoJsonFile(e.target.files[0], 'siteBoundaryData', 'Site boundary'));
+const lpaBoundaryFile = document.getElementById('lpaBoundaryFile');
+if(lpaBoundaryFile) lpaBoundaryFile.addEventListener('change', e => readGeoJsonFile(e.target.files[0], 'lpaData', 'LPA layer'));
+const npaBoundaryFile = document.getElementById('npaBoundaryFile');
+if(npaBoundaryFile) npaBoundaryFile.addEventListener('change', e => readGeoJsonFile(e.target.files[0], 'npaData', 'National Park layer'));
+const identifyAuthoritiesBtn = document.getElementById('identifyAuthoritiesBtn');
+if(identifyAuthoritiesBtn) identifyAuthoritiesBtn.addEventListener('click', identifyPlanningAuthorities);
+const clearAuthorityLayersBtn = document.getElementById('clearAuthorityLayersBtn');
+if(clearAuthorityLayersBtn) clearAuthorityLayersBtn.addEventListener('click', () => {
+  state.lpaData = null; state.npaData = null; state.siteBoundaryData = null;
+  clearAuthorityLayer();
+  document.getElementById('planningAuthorityResult').textContent = 'No authority result yet.';
+  document.getElementById('authorityStatus').textContent = 'No planning authority layers loaded yet.';
+  document.getElementById('msg').textContent = 'Planning authority layers cleared.';
+});
+const setSiteFromAddressBtn = document.getElementById("setSiteFromAddressBtn");
+if(setSiteFromAddressBtn) setSiteFromAddressBtn.addEventListener("click", geocodeAddressToSite);
+const useMapCentreBtn = document.getElementById("useMapCentreBtn");
+if(useMapCentreBtn) useMapCentreBtn.addEventListener("click", function(){
+  if(!state.map) return;
+  const c = state.map.getCenter();
+  setSiteBoxFromLatLon(c.lat, c.lng, 500);
+  document.getElementById('msg').textContent = 'Site location set from current map centre.';
+});
+const constraintGeojsonFile = document.getElementById("constraintGeojsonFile");
+if(constraintGeojsonFile) constraintGeojsonFile.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  file.text().then(txt => {
+    try{
+      state.constraintData = JSON.parse(txt);
+      renderConstraintLayer();
+    }catch(err){
+      document.getElementById('msg').textContent = 'Could not read the uploaded GeoJSON layer.';
+    }
+  });
+});
+document.getElementById("fitBtn").addEventListener("click", fitToSurveyExtents);
+["showTrees","showCanopy","showRpa"].forEach(id => document.getElementById(id).addEventListener("change", renderMap));
+
+
+function openAtiAtSiteLocation(){
+  let lat = null, lon = null;
+  const latEl = document.getElementById('siteLatInput');
+  const lonEl = document.getElementById('siteLonInput');
+  if(latEl && lonEl && latEl.value && lonEl.value){
+    lat = Number(latEl.value);
+    lon = Number(lonEl.value);
+  } else if(state.siteCenter){
+    lat = Number(state.siteCenter[0]);
+    lon = Number(state.siteCenter[1]);
+  } else if(state.projectMeta && state.projectMeta.site_centre){
+    lat = Number(state.projectMeta.site_centre.lat);
+    lon = Number(state.projectMeta.site_centre.lon);
+  }
+  let url = 'https://ati.woodlandtrust.org.uk/tree-search/?ml=map&z=6';
+  if(Number.isFinite(lat) && Number.isFinite(lon)){
+    const z = 15;
+    const nwLat = lat + 0.01;
+    const nwLng = lon - 0.01;
+    const seLat = lat - 0.01;
+    const seLng = lon + 0.01;
+    url = 'https://ati.woodlandtrust.org.uk/tree-search/?v=3011349&ml=map'
+      + '&z=' + encodeURIComponent(z)
+      + '&nwLat=' + encodeURIComponent(nwLat)
+      + '&nwLng=' + encodeURIComponent(nwLng)
+      + '&seLat=' + encodeURIComponent(seLat)
+      + '&seLng=' + encodeURIComponent(seLng);
+  }
+  window.open(url, '_blank');
+}
+setTimeout(function(){
+  const atiBtn = document.getElementById('openAtiBtn');
+  if(atiBtn){
+    const clone = atiBtn.cloneNode(true);
+    atiBtn.parentNode.replaceChild(clone, atiBtn);
+    clone.addEventListener('click', openAtiAtSiteLocation);
+  }
+}, 0);
+
+
+
+
+/* --- v48 targeted overrides: robust CRS handling + drawn RLB authority lookup --- */
+function normaliseAuthorityName_v48(props){
+  if(!props) return 'Unknown authority';
+  const candidates = [
+    props.LPA23NM, props.LPA_NAME, props.LPA_NAME23, props.NAME, props.name,
+    props.NATPARK, props.NPARK_NAME, props.NPName, props.park_name,
+    props.lpa_name, props['official-name'], props.official_name,
+    props['local-authority'], props.local_authority,
+    props.organisation, props.organization,
+    props.label, props.title, props.description
+  ];
+  for(const c of candidates){
+    if(typeof c === 'string' && c.trim()) return c.trim();
+  }
+  for(const key in props){
+    const val = props[key];
+    if(typeof val === 'string' && val.trim()){
+      const s = val.trim().toLowerCase();
+      if(s.includes('national park authority') || s.includes('planning authority') || s.includes('county borough council') || s.includes('council') || s.includes('borough')){
+        return val.trim();
+      }
+    }
+  }
+  return 'Unknown authority';
+}
+
+function v48_clone(obj){
+  return obj ? JSON.parse(JSON.stringify(obj)) : obj;
+}
+
+function v48_geometryLooksLikeBngCoords(geom){
+  let hit = false;
+  function walk(coords){
+    if(hit || !Array.isArray(coords)) return;
+    if(typeof coords[0] === 'number' && typeof coords[1] === 'number'){
+      const x = coords[0], y = coords[1];
+      if(Math.abs(x) > 180 || Math.abs(y) > 90) hit = true;
+      return;
+    }
+    coords.forEach(walk);
+  }
+  if(geom && geom.coordinates) walk(geom.coordinates);
+  return hit;
+}
+
+function v48_transformCoords27700To4326(coords){
+  if(!Array.isArray(coords)) return coords;
+  if(typeof coords[0] === 'number' && typeof coords[1] === 'number'){
+    try{
+      const out = proj4('EPSG:27700','EPSG:4326',[coords[0], coords[1]]);
+      return [out[0], out[1]];
+    }catch(err){
+      return coords;
+    }
+  }
+  return coords.map(v48_transformCoords27700To4326);
+}
+
+function v48_normaliseGeoJsonToWgs84(data){
+  if(!data) return data;
+  const copy = v48_clone(data);
+  const crsName = (copy.crs && copy.crs.properties && (copy.crs.properties.name || copy.crs.properties.code || copy.crs.properties.urn || '')) || '';
+  const needsTransformByCrs = /27700|british national grid|osgb/i.test(String(crsName));
+
+  function transformFeature(feature){
+    if(!feature || !feature.geometry) return feature;
+    const needsTransform = needsTransformByCrs || v48_geometryLooksLikeBngCoords(feature.geometry);
+    if(needsTransform && feature.geometry.coordinates){
+      feature.geometry.coordinates = v48_transformCoords27700To4326(feature.geometry.coordinates);
+    }
+    return feature;
+  }
+
+  if(copy.type === 'FeatureCollection'){
+    copy.features = (copy.features || []).map(transformFeature);
+  } else if(copy.type === 'Feature'){
+    transformFeature(copy);
+  }
+  return copy;
+}
+
+function clearRedLine_v48(){
+  state.redLineData = null;
+  if(state.redLineLayer && state.map){
+    state.map.removeLayer(state.redLineLayer);
+    state.redLineLayer = null;
+  }
+  if(state.redLineSetupLayer && state.setupMap){
+    state.setupMap.removeLayer(state.redLineSetupLayer);
+    state.redLineSetupLayer = null;
+  }
+  const status = document.getElementById('redLineStatus');
+  if(status) status.textContent = 'No red line boundary loaded yet.';
+  document.getElementById('msg').textContent = 'Red line boundary cleared.';
+}
+
+function readGeoJsonFile_v48(file, assignKey, label){
+  if(!file) return;
+  file.text().then(txt => {
+    try{
+      const parsed = JSON.parse(txt);
+      state[assignKey] = v48_normaliseGeoJsonToWgs84(parsed);
+      renderAuthorityLayers();
+      if(assignKey === 'siteBoundaryData' && !state.redLineData){
+        try{
+          const temp = L.geoJSON(state[assignKey]);
+          const b = temp.getBounds();
+          if(b.isValid()){
+            if(state.map) state.map.fitBounds(b.pad(0.12));
+          }
+        }catch(err){}
+      }
+      document.getElementById('authorityStatus').textContent = label + ' loaded.';
+      document.getElementById('msg').textContent = label + ' loaded.';
+    }catch(err){
+      document.getElementById('msg').textContent = 'Could not read ' + label + '.';
+    }
+  });
+}
+
+function loadRedLineGeoJsonObject_v48(obj){
+  state.redLineData = v48_normaliseGeoJsonToWgs84(obj);
+  renderRedLine();
+  document.getElementById('msg').textContent = 'Red line boundary loaded.';
+}
+
+function identifyPlanningAuthorities_v48(){
+  const resultEl = document.getElementById('planningAuthorityResult');
+  const statusEl = document.getElementById('authorityStatus');
+  const dsLpaEl = document.getElementById('dsLpa');
+  const lpaFc = state.lpaData && state.lpaData.features ? state.lpaData : null;
+  const npaFc = state.npaData && state.npaData.features ? state.npaData : null;
+
+  if(!lpaFc && !npaFc){
+    const msg = 'Load LPA and/or National Park boundary GeoJSON first.';
+    if(resultEl) resultEl.textContent = msg;
+    if(statusEl) statusEl.textContent = msg;
+    document.getElementById('msg').textContent = msg;
+    return;
+  }
+
+  let siteFeatures = [];
+  let basis = '';
+  if(state.redLineData && state.redLineData.features && state.redLineData.features.length){
+    siteFeatures = state.redLineData.features.filter(Boolean);
+    basis = 'drawn/imported red line boundary';
+  } else if(state.siteBoundaryData && state.siteBoundaryData.features && state.siteBoundaryData.features.length){
+    siteFeatures = state.siteBoundaryData.features.filter(Boolean);
+    basis = 'uploaded site boundary';
+  }
+
+  let matches = [];
+
+  if(siteFeatures.length){
+    const rawMatches = [];
+    [lpaFc, npaFc].forEach((fc, idx) => {
+      const sourceType = idx === 0 ? 'LPA' : 'NPA';
+      if(!fc || !fc.features) return;
+      siteFeatures.forEach(siteFeature => {
+        fc.features.forEach(f => {
+          try{
+            if(turf.booleanIntersects(siteFeature, f)){
+              let overlapArea = 0;
+              try{
+                const inter = turf.intersect(turf.featureCollection([siteFeature, f]));
+                if(inter) overlapArea = turf.area(inter);
+              }catch(err){}
+              rawMatches.push({
+                name: normaliseAuthorityName_v48(f.properties),
+                area: overlapArea,
+                sourceType: sourceType
+              });
+            }
+          }catch(err){}
+        });
+      });
+    });
+
+    const merged = {};
+    rawMatches.forEach(m => {
+      const key = String(m.name).trim().toLowerCase();
+      if(!merged[key]) merged[key] = {name:m.name, area:0, sourceType:m.sourceType};
+      merged[key].area += Number(m.area || 0);
+      if(m.sourceType === 'NPA') merged[key].sourceType = 'NPA';
+    });
+    matches = Object.values(merged);
+  } else {
+    let lat = null, lon = null;
+    const latEl = document.getElementById('siteLatInput');
+    const lonEl = document.getElementById('siteLonInput');
+    if(latEl && lonEl && latEl.value && lonEl.value){
+      lat = Number(latEl.value);
+      lon = Number(lonEl.value);
+    } else if(state.siteCenter){
+      lat = Number(state.siteCenter[0]);
+      lon = Number(state.siteCenter[1]);
+    } else if(state.projectMeta && state.projectMeta.site_centre){
+      lat = Number(state.projectMeta.site_centre.lat);
+      lon = Number(state.projectMeta.site_centre.lon);
+    }
+
+    if(!Number.isFinite(lat) || !Number.isFinite(lon)){
+      const msg = 'Set a site location or draw/import a red line boundary first.';
+      if(resultEl) resultEl.textContent = msg;
+      document.getElementById('msg').textContent = msg;
+      return;
+    }
+    basis = 'site point fallback';
+    const pt = turf.point([lon, lat]);
+    [lpaFc, npaFc].forEach((fc, idx) => {
+      const sourceType = idx === 0 ? 'LPA' : 'NPA';
+      if(!fc || !fc.features) return;
+      fc.features.forEach(f => {
+        try{
+          if(turf.booleanPointInPolygon(pt, f)){
+            matches.push({name: normaliseAuthorityName_v48(f.properties), area:0, sourceType:sourceType});
+          }
+        }catch(err){}
+      });
+    });
+    const dedup = {};
+    matches.forEach(m => {
+      const key = String(m.name).trim().toLowerCase();
+      if(!dedup[key]) dedup[key] = m;
+      if(m.sourceType === 'NPA') dedup[key].sourceType = 'NPA';
+    });
+    matches = Object.values(dedup);
+  }
+
+  matches.sort((a,b) => {
+    const aN = a.sourceType === 'NPA' ? 1 : 0;
+    const bN = b.sourceType === 'NPA' ? 1 : 0;
+    return (bN - aN) || ((b.area || 0) - (a.area || 0)) || a.name.localeCompare(b.name);
+  });
+
+  if(!matches.length){
+    const msg = 'No intersecting planning authority found from the loaded layers.';
+    if(resultEl) resultEl.textContent = msg;
+    if(dsLpaEl) dsLpaEl.value = '';
+    if(statusEl) statusEl.textContent = msg;
+    document.getElementById('msg').textContent = msg;
+    return;
+  }
+
+  const names = matches.map(m => m.name);
+  if(dsLpaEl) dsLpaEl.value = names.join('; ');
+  if(statusEl) statusEl.textContent = `Identified ${names.length} planning authorit${names.length===1?'y':'ies'} using ${basis}.`;
+  if(resultEl){
+    if(matches.length === 1){
+      resultEl.textContent = `Planning authority identified from ${basis}: ${names[0]}.`;
+    } else {
+      resultEl.textContent = `Multiple planning authorities identified from ${basis}: ${names.join('; ')}. Primary by priority/overlap: ${matches[0].name}.`;
+    }
+  }
+  document.getElementById('msg').textContent = matches.length === 1
+    ? `Planning authority identified: ${names[0]}.`
+    : `Multiple planning authorities identified: ${names.join('; ')}.`;
+}
+
+setTimeout(function(){
+  window.readGeoJsonFile = readGeoJsonFile_v48;
+  window.loadRedLineGeoJsonObject = loadRedLineGeoJsonObject_v48;
+  const clearBtn = document.getElementById('clearRedLineBtn');
+  if(clearBtn){
+    const clone = clearBtn.cloneNode(true);
+    clearBtn.parentNode.replaceChild(clone, clearBtn);
+    clone.addEventListener('click', clearRedLine_v48);
+  }
+  const idBtn = document.getElementById('identifyAuthoritiesBtn');
+  if(idBtn){
+    const clone = idBtn.cloneNode(true);
+    idBtn.parentNode.replaceChild(clone, idBtn);
+    clone.addEventListener('click', identifyPlanningAuthorities_v48);
+  }
+  const siteBoundaryFile = document.getElementById('siteBoundaryFile');
+  if(siteBoundaryFile){
+    const clone = siteBoundaryFile.cloneNode(true);
+    siteBoundaryFile.parentNode.replaceChild(clone, siteBoundaryFile);
+    clone.addEventListener('change', e => readGeoJsonFile_v48(e.target.files[0], 'siteBoundaryData', 'Site boundary'));
+  }
+  const lpaBoundaryFile = document.getElementById('lpaBoundaryFile');
+  if(lpaBoundaryFile){
+    const clone = lpaBoundaryFile.cloneNode(true);
+    lpaBoundaryFile.parentNode.replaceChild(clone, lpaBoundaryFile);
+    clone.addEventListener('change', e => readGeoJsonFile_v48(e.target.files[0], 'lpaData', 'LPA layer'));
+  }
+  const npaBoundaryFile = document.getElementById('npaBoundaryFile');
+  if(npaBoundaryFile){
+    const clone = npaBoundaryFile.cloneNode(true);
+    npaBoundaryFile.parentNode.replaceChild(clone, npaBoundaryFile);
+    clone.addEventListener('change', e => readGeoJsonFile_v48(e.target.files[0], 'npaData', 'National Park layer'));
+  }
+  const redLineInput = document.getElementById('redLineGeoJsonInput');
+  if(redLineInput){
+    const clone = redLineInput.cloneNode(true);
+    redLineInput.parentNode.replaceChild(clone, redLineInput);
+    clone.addEventListener('change', function(e){
+      const file = e.target.files[0];
+      if(!file) return;
+      file.text().then(function(txt){
+        try{
+          const obj = JSON.parse(txt);
+          loadRedLineGeoJsonObject_v48(obj);
+        }catch(err){
+          document.getElementById('msg').textContent = 'Could not read red line GeoJSON.';
+        }
+      });
+    });
+  }
+}, 0);
+/* --- end v48 targeted overrides --- */
+
+
+initMap();
+loadRows([]);
+</script>
+
+<div style="margin-top:10px;border:1px solid #ddd;padding:10px;border-radius:10px">
+<b>Map Tools</b><br>
+<button onclick="document.getElementById('overlayInput').click()">Load GeoJSON</button>
+<button onclick="startDistance()">Distance</button>
+<button onclick="startArea()">Area</button>
+<button onclick="clearMeasure()">Clear</button>
+<button onclick="exportFigure()">Export PNG (15cm)</button>
+<input type="file" id="overlayInput" multiple accept=".geojson,.json" style="display:none">
+<div id="layerList"></div>
+</div>
+<script id="tilia-dashboard-v53-clean-figure">
+(function(){const V={overlays:[],seq:1,measureLayer:null,mode:null,pts:[],temp:null,street:null,aerial:null};const pal=['#7C3AED','#0891B2','#DC2626','#16A34A','#F97316','#BE185D','#111827','#0D4D95'];const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));const slug=s=>String(s||'figure').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'figure';const msg=t=>{const m=$('msg');if(m)m.textContent=t};
+function st(o){return{color:o.color,weight:+o.weight||2,fillColor:o.color,fillOpacity:+o.opacity||.18}}function add(data,map,o){return L.geoJSON(data,{style:()=>st(o),pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:5,color:o.color,weight:2,fillColor:o.color,fillOpacity:.85})}).addTo(map)}
+async function load(e){const fs=Array.from(e.target.files||[]);for(const f of fs){try{const data=JSON.parse(await f.text()),i=V.overlays.length,o={id:'v53_'+V.seq++,name:f.name.replace(/\.(geojson|json)$/i,''),data,color:pal[i%pal.length],opacity:.18,weight:2,visible:true,mapLayer:null,setupLayer:null};if(state.map)o.mapLayer=add(data,state.map,o);if(state.setupMap)o.setupLayer=add(data,state.setupMap,o);V.overlays.push(o);try{const b=o.mapLayer.getBounds();if(b&&b.isValid())state.map.fitBounds(b.pad(.12))}catch(err){}}catch(err){alert('Could not load '+f.name)}}e.target.value='';render();msg(fs.length+' overlay file(s) loaded.')}
+function apply(o){[o.mapLayer,o.setupLayer].forEach(g=>g&&g.eachLayer(l=>l.setStyle&&l.setStyle(st(o))))}function show(o,v){if(!o)return;o.visible=v;[[state.map,o.mapLayer],[state.setupMap,o.setupLayer]].forEach(([m,l])=>{if(!m||!l)return;if(v&&!m.hasLayer(l))l.addTo(m);if(!v&&m.hasLayer(l))m.removeLayer(l)})}function rem(id){const o=V.overlays.find(x=>x.id===id);if(o)[[state.map,o.mapLayer],[state.setupMap,o.setupLayer]].forEach(([m,l])=>{try{if(m&&l&&m.hasLayer(l))m.removeLayer(l)}catch(e){}});V.overlays=V.overlays.filter(x=>x.id!==id);render()}function clear(){V.overlays.slice().forEach(o=>rem(o.id));msg('All report figure overlays cleared.')}
+function render(){const b=$('v53LayerList');if(!b)return;if(!V.overlays.length){b.innerHTML='<div class="v53-small">No report figure overlays loaded yet.</div>';return}b.innerHTML=V.overlays.map(o=>`<div class="v53-layer-row"><input type="checkbox" ${o.visible?'checked':''} data-vis="${o.id}"><div><input type="text" value="${esc(o.name)}" data-name="${o.id}"><div class="v53-small">${(o.data.features||[]).length||1} feature(s). No key is printed.</div></div><input type="color" value="${o.color}" data-col="${o.id}"><select data-op="${o.id}"><option value="0.05">5%</option><option value="0.12">12%</option><option value="0.18" selected>18%</option><option value="0.28">28%</option><option value="0.45">45%</option></select><button class="btn warn" data-rm="${o.id}">Remove</button></div>`).join('');b.querySelectorAll('[data-vis]').forEach(x=>x.onchange=()=>show(V.overlays.find(o=>o.id===x.dataset.vis),x.checked));b.querySelectorAll('[data-name]').forEach(x=>x.onchange=()=>{const o=V.overlays.find(o=>o.id===x.dataset.name);if(o)o.name=x.value||o.name});b.querySelectorAll('[data-col]').forEach(x=>x.onchange=()=>{const o=V.overlays.find(o=>o.id===x.dataset.col);if(o){o.color=x.value;apply(o);render()}});b.querySelectorAll('[data-op]').forEach(x=>x.onchange=()=>{const o=V.overlays.find(o=>o.id===x.dataset.op);if(o){o.opacity=+x.value;apply(o)}});b.querySelectorAll('[data-rm]').forEach(x=>x.onclick=()=>rem(x.dataset.rm))}
+function setBase(k){if(!state.map)return;if(!V.street)V.street=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"&copy; OpenStreetMap contributors &copy; CARTO",subdomains:"abcd",maxZoom:20});if(!V.aerial)V.aerial=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:22,maxNativeZoom:19,attribution:"Tiles &copy; Esri"});try{state.map.eachLayer(l=>{if(l instanceof L.TileLayer)state.map.removeLayer(l)})}catch(e){};(k==='aerial'?V.aerial:V.street).addTo(state.map);V.overlays.filter(o=>o.visible&&o.mapLayer).forEach(o=>{try{o.mapLayer.bringToFront()}catch(e){}})}
+function applyScale(){if(!state.map)return;const s=$('v53ScaleSelect').value;if(s==='manual'){msg('Manual view selected. Pan and zoom before export.');return}const cm=+$('v53FigureWidth').value||15,metres=(cm/100)*(+s),c=state.map.getCenter(),lat=c.lat*Math.PI/180,dlng=(metres/2)/(111320*Math.cos(lat)),dlat=(metres/2)*(1120/1700)/111320;state.map.fitBounds([[c.lat-dlat,c.lng-dlng],[c.lat+dlat,c.lng+dlng]],{animate:false});msg('Approximate scale applied.')}
+function nice(max){const p=Math.pow(10,Math.floor(Math.log10(max)));let b=p;[p,2*p,5*p,10*p].forEach(x=>{if(x<=max)b=x});return b}function fscale(m){return m>=1000?(m/1000)+' km':m+' m'}function scaleHtml(map,w){const y=map.getSize().y-60,l=map.containerPointToLatLng([80,y]),r=map.containerPointToLatLng([w*.38,y]),dist=map.distance(l,r),n=nice(dist),px=(n/dist)*(w*.38-80);return `<div class="v53-scale"><div class="v53-scale-label">${fscale(n)}</div><div class="v53-scale-line" style="width:${Math.max(80,px)}px"></div></div>`}
+function ensureM(){if(!V.measureLayer&&state.map)V.measureLayer=L.featureGroup().addTo(state.map)}function clearM(){if(V.measureLayer)V.measureLayer.clearLayers();V.pts=[];V.mode=null;V.temp=null;msg('Measurement cleared.')}function startM(m){clearM();ensureM();V.mode=m}function fd(m){return m>=1000?(m/1000).toFixed(2)+' km':m.toFixed(1)+' m'}function fa(a){return a>=10000?(a/10000).toFixed(3)+' ha ('+a.toFixed(0)+' m²)':a.toFixed(1)+' m²'}function click(e){if(!V.mode)return;ensureM();V.pts.push(e.latlng);L.circleMarker(e.latlng,{radius:4,color:'#111827',fillColor:'#fff',fillOpacity:1}).addTo(V.measureLayer);if(V.mode==='d'&&V.pts.length===2){const d=state.map.distance(V.pts[0],V.pts[1]);L.polyline(V.pts,{color:'#111827',weight:3}).addTo(V.measureLayer);L.marker(V.pts[1],{icon:L.divIcon({className:'v53-measure-label',html:fd(d)})}).addTo(V.measureLayer);V.mode=null}else if(V.mode==='a'&&V.pts.length>1){if(V.temp)V.measureLayer.removeLayer(V.temp);V.temp=L.polyline(V.pts,{color:'#111827',dashArray:'4 4'}).addTo(V.measureLayer)}}function dbl(e){if(V.mode!=='a'||V.pts.length<3)return;const pts=V.pts.slice(),poly=L.polygon(pts,{color:'#111827',fillOpacity:.08}).addTo(V.measureLayer);try{const c=pts.map(p=>[p.lng,p.lat]);c.push([pts[0].lng,pts[0].lat]);const a=turf.area({type:'Feature',properties:{},geometry:{type:'Polygon',coordinates:[c]}});L.marker(poly.getBounds().getCenter(),{icon:L.divIcon({className:'v53-measure-label',html:fa(a)})}).addTo(V.measureLayer)}catch(e){}V.mode=null;V.pts=[]}
+async function exp(){if(!state.map)return;const title=($('v53FigureTitleInput').value||'Report figure').trim(),showTitle=$('v53TitleMode').value==='show',cm=+$('v53FigureWidth').value||15,fw=Math.round(1772*(cm/15)),mw=Math.round(1700*(cm/15)),mh=Math.round(1120*(cm/15)),sc=$('v53FigureScratch');sc.innerHTML=`<div id="v53FigureFrame" style="width:${fw}px">${showTitle?`<div id="v53FigureTitle">${esc(title)}</div>`:''}<div id="v53FigureMap" style="width:${mw}px;height:${mh}px"><div class="v53-north">N<br>▲</div></div></div>`;const fm=L.map('v53FigureMap',{zoomControl:false,attributionControl:false,preferCanvas:true});if($('v53Basemap').value==='aerial')L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:22,maxNativeZoom:19,crossOrigin:true}).addTo(fm);else L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:20,crossOrigin:true}).addTo(fm);fm.setView(state.map.getCenter(),state.map.getZoom(),{animate:false});V.overlays.filter(o=>o.visible).forEach(o=>add(o.data,fm,o));try{if(state.redLineData)add(state.redLineData,fm,{color:'#c1121f',opacity:.03,weight:3})}catch(e){}await new Promise(r=>setTimeout(r,1100));$('v53FigureMap').insertAdjacentHTML('beforeend',scaleHtml(fm,mw));try{const canvas=await html2canvas($('v53FigureFrame'),{backgroundColor:'#fff',useCORS:true,scale:1});canvas.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=slug(title)+'_report_figure.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),600)},'image/png');msg('Clean report figure PNG exported.')}catch(err){alert('PNG export failed. Try Street basemap.')}try{fm.remove()}catch(e){}sc.innerHTML=''}
+function hook(){if(!$('v53FigureBuilder'))return;$('v53LoadOverlayBtn').onclick=()=>$('v53OverlayInput').click();$('v53OverlayInput').onchange=load;$('v53ClearOverlaysBtn').onclick=clear;$('v53ApplyScaleBtn').onclick=applyScale;$('v53MeasureDistanceBtn').onclick=()=>startM('d');$('v53MeasureAreaBtn').onclick=()=>startM('a');$('v53ClearMeasureBtn').onclick=clearM;$('v53ExportFigureBtn').onclick=exp;$('v53Basemap').onchange=()=>setBase($('v53Basemap').value);$('v53TitleMode').onchange=()=>{$('v53TitleField').style.display=$('v53TitleMode').value==='show'?'':'none'};if(state&&state.map&&!state._v53){state._v53=1;state.map.on('click',click);state.map.on('dblclick',dbl);try{state.map.doubleClickZoom.disable()}catch(e){}try{L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(state.map)}catch(e){}}render()}document.addEventListener('DOMContentLoaded',()=>setTimeout(hook,800));setTimeout(hook,1600);setInterval(hook,2500);window.TILIA_V53=V})();
+</script>
+</body>
+
+<script>
+let overlays=[];
+let measurePoints=[];
+let measureMode=null;
+let measureLayer;
+
+function ensureMeasureLayer(){
+  if(!measureLayer && state.map){
+    measureLayer=L.featureGroup().addTo(state.map);
+  }
+}
+
+document.getElementById('overlayInput').addEventListener('change', async (e)=>{
+  for(const f of e.target.files){
+    const txt=await f.text();
+    const data=JSON.parse(txt);
+    const layer=L.geoJSON(data,{style:{color:'#7c3aed',weight:2}}).addTo(state.map);
+    overlays.push({name:f.name,layer});
+    renderLayers();
+  }
+});
+
+function renderLayers(){
+  const el=document.getElementById('layerList');
+  el.innerHTML=overlays.map((o,i)=>`
+    <div>
+      <input type="checkbox" checked onchange="toggleLayer(${i},this.checked)">
+      ${o.name}
+      <button onclick="removeLayer(${i})">x</button>
+    </div>
+  `).join('');
+}
+
+function toggleLayer(i,v){
+  if(v) state.map.addLayer(overlays[i].layer);
+  else state.map.removeLayer(overlays[i].layer);
+}
+
+function removeLayer(i){
+  state.map.removeLayer(overlays[i].layer);
+  overlays.splice(i,1);
+  renderLayers();
+}
+
+function startDistance(){
+  measureMode='distance';
+  measurePoints=[];
+}
+
+function startArea(){
+  measureMode='area';
+  measurePoints=[];
+}
+
+function clearMeasure(){
+  if(measureLayer) measureLayer.clearLayers();
+}
+
+state.map.on('click',function(e){
+  if(!measureMode) return;
+  ensureMeasureLayer();
+  measurePoints.push(e.latlng);
+  L.circleMarker(e.latlng,{radius:4}).addTo(measureLayer);
+
+  if(measureMode==='distance' && measurePoints.length===2){
+    const m=state.map.distance(measurePoints[0],measurePoints[1]);
+    L.polyline(measurePoints).addTo(measureLayer);
+    alert(m.toFixed(1)+' m');
+    measureMode=null;
+  }
+});
+
+state.map.on('dblclick',function(){
+  if(measureMode==='area' && measurePoints.length>2){
+    const poly=L.polygon(measurePoints).addTo(measureLayer);
+    measureMode=null;
+  }
+});
+
+function exportFigure(){
+  html2canvas(document.querySelector('#map')).then(c=>{
+    c.toBlob(b=>{
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(b);
+      a.download='figure.png';
+      a.click();
+    });
+  });
+}
+</script>
+</html>

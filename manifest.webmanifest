@@ -1,0 +1,16 @@
+{
+  "name": "TILIA Dashboard",
+  "short_name": "TILIA Dash",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef3f6",
+  "theme_color": "#0d4f24",
+  "icons": [
+    {
+      "src": "icons/tilia-logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
